@@ -1,0 +1,2 @@
+n_runs,ranking_pattern,inferential_test
+5,disagree (non-monotone; FedAPEN FM rank 3 vs class-gap rank 5),none; n=5 is insufficient to test whether the order disagreement is systematic

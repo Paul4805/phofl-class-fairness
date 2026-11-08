@@ -1,0 +1,2 @@
+method,pattern,client_FM,class_std,class_gap,supported_class_gap,worst_class,worst_class_recall,best_class,best_class_recall,client_FM_rank,class_gap_rank,ranking,claim_scope
+FedAPEN,linear,0.08393970284896658,0.16976127355789955,0.529,0.4158588341141153,cat,0.256,frog,0.785,3,5,inverted,field-wide (>30-point class gap)

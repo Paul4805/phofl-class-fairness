@@ -1,0 +1,10 @@
+metric,comparison,test,n,statistic,p_raw,median_diff,note,p_holm,significant_raw,significant_holm
+accuracy,PHPFL vs Standalone [linear],wilcoxon,10,0.0,0.001953125,0.08600000000000002,,0.017578125,True,True
+accuracy,PHPFL vs Standalone [entropy_correlated],wilcoxon,10,0.0,0.001953125,0.07500000000000007,,0.017578125,True,True
+accuracy,linear vs entropy [accuracy],wilcoxon,10,26.5,1.0,0.0,,1.0,False,False
+|acc - group mean|,linear vs entropy [dispersion],wilcoxon,10,27.0,1.0,-0.0040000000000000036,larger = more unequal,1.0,False,False
+min-accuracy tail shortfall,linear vs entropy [min tail-shortfall],wilcoxon,10,7.0,0.892738400944348,0.0,paired shortfall analogue; min/CVaR are group scalars,1.0,False,False
+CVaR10 tail shortfall,linear vs entropy [CVaR10 tail-shortfall],wilcoxon,10,7.0,0.892738400944348,0.0,same paired shortfall; with 10 clients CVaR10 = min,1.0,False,False
+min-accuracy,linear vs entropy [min],paired bootstrap,10,-0.025570259259259258,0.20877912208779123,-0.025570259259259258,"95% CI [-0.0420, 0.0200]; positive = drop",1.0,False,False
+CVaR10,linear vs entropy [CVaR10],paired bootstrap,10,-0.025570259259259258,0.20877912208779123,-0.025570259259259258,"95% CI [-0.0420, 0.0200]; positive = drop",1.0,False,False
+PHPFL - Standalone,linear vs entropy [advantage],wilcoxon,10,26.5,1.0,0.0,positive = advantage grows under entropy,1.0,False,False

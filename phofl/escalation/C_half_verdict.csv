@@ -1,0 +1,2 @@
+FM_linear,FM_entropy,FM_increase_rel,min_linear,min_entropy,min_drop_pts,rho_linear,rho_entropy,rho_diff,pinned_smoke_FM_increase_rel,stop_threshold_FM_rel,STOP,GO,decision
+0.0785059623472411,0.0762743419609702,-0.028426126112564225,0.492,0.5329218106995884,-4.092181069958844,-0.103030303030303,-0.2727272727272727,0.1696969696969697,0.15416032302905922,0.16957635533196516,True,False,FAIL

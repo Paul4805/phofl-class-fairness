@@ -1,0 +1,6 @@
+run_id,method,pattern,total_cells,supported_cells,low_support_cells,support_threshold
+C_half__PHPFL__linear__s0__half10__3cf8f53c,PHPFL,linear,100,66,34,10
+C_half__PHPFL__entropy_correlated__s0__half10__d487d09e,PHPFL,entropy_correlated,100,66,34,10
+C_half__Standalone__linear__s0__half10__fff4222c,Standalone,linear,100,66,34,10
+C_half__Standalone__entropy_correlated__s0__half10__73be5333,Standalone,entropy_correlated,100,66,34,10
+C_half__FedAPEN__linear__s0__half10__7bdbf30a,FedAPEN,linear,100,66,34,10

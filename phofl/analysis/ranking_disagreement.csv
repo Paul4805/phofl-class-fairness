@@ -1,0 +1,6 @@
+run_id,method,pattern,client_FM,class_std,worst_class_recall,class_gap,gap_over_am,gap_over_ceiling,client_FM_rank,class_std_rank,rank_delta,worst_class_rank,class_gap_rank,gap_over_am_rank,gap_over_ceiling_rank
+C_half__PHPFL__entropy_correlated__s0__half10__d487d09e,PHPFL,entropy_correlated,0.0762743419609702,0.13494724895306315,0.24,0.45599999999999996,0.7229303656597774,0.6,1,4,3,3,4,4,4
+C_half__PHPFL__linear__s0__half10__3cf8f53c,PHPFL,linear,0.0785059623472411,0.1334460190489023,0.251,0.44299999999999995,0.7009831799428752,0.5914552736982643,2,3,1,2,3,1,3
+C_half__FedAPEN__linear__s0__half10__7bdbf30a,FedAPEN,linear,0.08393970284896658,0.16976127355789955,0.256,0.529,0.8519360465116279,0.7110215053763441,3,5,2,1,5,5,5
+C_half__Standalone__linear__s0__half10__fff4222c,Standalone,linear,0.0962254635340491,0.12806830208915865,0.229,0.386,0.7109700775766532,0.5006485084306096,4,2,-2,4,1,2,2
+C_half__Standalone__entropy_correlated__s0__half10__73be5333,Standalone,entropy_correlated,0.0984520174082187,0.11964819263156465,0.218,0.389,0.7115018341892885,0.49744245524296676,5,1,-4,5,2,3,1

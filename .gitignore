@@ -1,0 +1,37 @@
+# Python environments
+.venv/
+.venv-*/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# External repositories (clone locally; pinned in README/notebook)
+third_party/
+
+# Generated data
+phofl_half/data/
+phofl_half/data_cap/
+phofl_half/run_store/
+phofl/run_store/
+phofl_pinned/
+
+# Model checkpoints and scratch state
+phofl/ckpts/
+phofl_half/ckpts/
+*.pt
+*.pth
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Local notebook duplicate
+phofl/phofl_experiments.ipynb

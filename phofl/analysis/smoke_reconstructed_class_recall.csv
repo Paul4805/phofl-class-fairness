@@ -1,0 +1,7 @@
+exp,run_id,method,pattern,agg_mode,n_clients,class_std_clientmean,worst_class,worst_recall,best_class,best_recall,class_gap
+B_agg,B_agg__PHPFL__normal__s0__smoke10__559d4623,PHPFL,normal,plain,10,0.18895797456176322,deer,0.251547619047619,automobile,0.8917185555540897,0.6401709365064707
+B_agg,B_agg__PHPFL__normal__s0__smoke10__d2e852cc,PHPFL,normal,inv_p,10,0.1853244258941597,deer,0.2578571428571429,automobile,0.8890460579836331,0.6311889151264902
+B_agg,B_agg__PHPFL__normal__s0__smoke10__efdc9cfa,PHPFL,normal,inv_N,10,0.17985525451451853,deer,0.25295606975184437,automobile,0.8880742406852852,0.6351181709334408
+C_participation,C_participation__PHPFL__entropy_correlated__s0__smoke10__521b70b8,PHPFL,entropy_correlated,plain,10,0.18533550773302207,deer,0.2223809523809524,automobile,0.882366243200577,0.6599852908196246
+C_participation,C_participation__PHPFL__linear__s0__smoke10__f2ccbb3f,PHPFL,linear,plain,10,0.18770356036217128,deer,0.20442176870748302,automobile,0.8630742406852852,0.6586524719778022
+C_participation,C_participation__Standalone__linear__s0__smoke10__7206fc2f,Standalone,linear,none,10,0.1484479242087261,deer,0.25571428571428567,automobile,0.7971804106257887,0.541466124911503

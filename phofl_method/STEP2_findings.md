@@ -1,0 +1,3 @@
+# Step 2 - confusion-targeted loss
+
+Confusion-targeted local loss (top-3 validation confusion pairs, margin 1.0, lambda=0.1) produced AM=0.6346, FM=0.0900, and a class gap of 0.4500 (baseline 0.4430; relative reduction -1.6%). Dog recall moved from 0.2510 to 0.2700; frog recall moved from 0.6940 to 0.7200. Dog-to-cat error rate moved from 0.2490 to 0.1910 (decreased). The >30% reduction threshold is not met; proceed to Step 3.

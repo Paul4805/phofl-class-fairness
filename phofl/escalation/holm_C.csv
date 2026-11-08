@@ -1,0 +1,6 @@
+metric,comparison,raw_p,holm_p,raw_sig,holm_sig,loses_sig
+accuracy,PHPFL vs Standalone [linear],0.064453125,0.193359375,False,False,False
+accuracy,PHPFL vs Standalone [entropy_correlated],0.001953125,0.009765625,True,True,False
+accuracy,linear vs entropy [accuracy],0.41015625,0.8203125,False,False,False
+|acc - group mean|,linear vs entropy [dispersion],0.041015625,0.1640625,True,False,True
+PHPFL - Standalone,linear vs entropy [advantage],0.41015625,0.8203125,False,False,False

@@ -1,0 +1,2 @@
+step,method,run_id,temperature,AM,FM,class_gap,baseline_class_gap,gap_reduction_rel,dog_recall,frog_recall,baseline_best_dog_arch,baseline_best_dog_recall,method_best_dog_arch,method_best_dog_recall,best_dog_arch_changed,worst_class,worst_class_recall,best_class,best_class_recall
+4,per_class_distillation,STEP4__PHPFL__linear__s0__half10__682b80ac,1.0,0.6321700762133975,0.09442708224175926,0.424,0.44299999999999995,0.042889390519187276,0.282,0.706,efficientnet-b1,0.5991313789359392,efficientnet-b1,0.6286373507057547,False,dog,0.282,frog,0.706

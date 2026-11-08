@@ -1,0 +1,2 @@
+method,pattern,AM,FM,min_acc,p10,cvar10,rho_p_acc
+Standalone,entropy_correlated,0.4605,0.18557276200994582,0.1,0.199,0.1,0.5272727272727272

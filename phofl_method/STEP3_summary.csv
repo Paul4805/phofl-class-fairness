@@ -1,0 +1,2 @@
+step,method,run_id,gamma,AM,FM,class_gap,baseline_class_gap,gap_reduction_rel,dog_recall,frog_recall,worst_class,worst_class_recall,best_class,best_class_recall
+3,worst_class_weighted_aggregation,STEP3__PHPFL__linear__s0__half10__e6b6e177,5.0,0.6311672683513839,0.10023895756910317,0.431,0.44299999999999995,0.027088036117381392,0.292,0.723,dog,0.292,frog,0.723

@@ -1,0 +1,2 @@
+step,method,run_id,AM,FM,class_gap,baseline_class_gap,gap_reduction_rel,dog_recall,frog_recall,dog_to_cat_baseline,dog_to_cat_method,dog_to_cat_delta,worst_class,worst_class_recall,best_class,best_class_recall
+2,confusion_targeted_loss,STEP2__PHPFL__linear__s0__half10__130ba15d,0.6345768150822303,0.09000494087946533,0.44999999999999996,0.44299999999999995,-0.015801354401805884,0.27,0.72,0.249,0.191,-0.057999999999999996,dog,0.27,frog,0.72

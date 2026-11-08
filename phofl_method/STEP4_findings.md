@@ -1,0 +1,3 @@
+# Step 4 - per-class distillation
+
+Per-class KL weighting (weight exp(r_i(c)/T), T=1.0) produced AM=0.6322, FM=0.0944, and a class gap of 0.4240 (baseline 0.4430; relative reduction 4.3%). Dog recall moved from 0.2510 to 0.2820; frog recall moved from 0.6940 to 0.7060. The best dog architecture was efficientnet-b1 (mean dog recall 0.5991) before and efficientnet-b1 (0.6286) after; the best-dog architecture did not change. Worst class is dog at 0.2820. The >30% reduction threshold is not met; no seed-1 rerun is triggered.

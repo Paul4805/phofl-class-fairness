@@ -1,0 +1,2 @@
+step,method,run_id,AM,FM,class_gap,baseline_class_gap,gap_reduction_rel,dog_recall,frog_recall,worst_class,worst_class_recall,best_class,best_class_recall
+1,class_balanced_rehearsal,STEP1__PHPFL__linear__s0__half10__0669227f,0.6099077416766947,0.08544246140677529,0.408,0.44299999999999995,0.0790067720090293,0.32,0.728,dog,0.32,frog,0.728
