@@ -1,10 +1,7 @@
 version: 2
 updates:
-  - package-ecosystem: pip
-    directory: "/"
-    schedule:
-      interval: monthly
-    open-pull-requests-limit: 3
+  # Python dependencies are intentionally pinned for paper reproducibility.
+  # Do not enable pip updates here without re-validating every result table.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
