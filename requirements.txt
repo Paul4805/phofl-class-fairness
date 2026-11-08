@@ -16,6 +16,6 @@ psutil==5.9.8
 nvidia-ml-py==12.535.133
 efficientnet-pytorch==0.7.1
 h5py==3.10.0
-ujson==5.10.0
+ujson==6.1.0
 wandb==0.19.6
 ipynbname==2023.8.8.0
