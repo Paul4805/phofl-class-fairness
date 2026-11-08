@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/Paul4805/phofl-class-fairness/security/advisories/new
+    about: Report vulnerabilities privately.
+  - name: Paper and results
+    url: https://github.com/Paul4805/phofl-class-fairness/tree/main/phofl/paper
+    about: Read the measurement paper and result artifacts.

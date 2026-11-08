@@ -1,0 +1,19 @@
+{
+  "title": "Class Fairness in Model-Heterogeneous Federated Learning: Measurement and a Diagnostic Ladder",
+  "description": "A measurement study of client-FM versus two-axis (client x class) fairness in model-heterogeneous federated learning, with a diagnostic ladder showing that four standard interventions reduce the class gap by at most 7.9% over one seed. Proposes class-FM as a reporting metric, not a training method.",
+  "creators": [
+    {
+      "name": "Masillamni, J Paul"
+    }
+  ],
+  "license": "MIT",
+  "upload_type": "software",
+  "keywords": [
+    "federated learning",
+    "fairness",
+    "class imbalance",
+    "model heterogeneity",
+    "evaluation metrics",
+    "reproducibility"
+  ]
+}

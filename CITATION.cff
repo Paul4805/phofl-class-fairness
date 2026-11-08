@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this repository or the measurement results, please cite it using the metadata below."
+title: "Class Fairness in Model-Heterogeneous Federated Learning: Measurement and a Diagnostic Ladder"
+type: software
+authors:
+  - family-names: Masillamni
+    given-names: J Paul
+repository-code: "https://github.com/Paul4805/phofl-class-fairness"
+url: "https://github.com/Paul4805/phofl-class-fairness"
+license: MIT
+version: 0.1.0
+date-released: 2026-11-08
+abstract: >-
+  A measurement study showing that client-FM hides a large class-recall spread
+  in model-heterogeneous federated learning, and a diagnostic ladder showing
+  that four standard interventions reduce that spread by at most 7.9% over one
+  seed. The repository proposes class-FM as a reporting metric, not a training
+  method.
+keywords:
+  - federated learning
+  - fairness
+  - class imbalance
+  - model heterogeneity
+  - evaluation metrics
+  - reproducibility

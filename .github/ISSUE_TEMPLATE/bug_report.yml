@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a reproducibility or code issue
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting an issue. Please do not include credentials,
+        private data, or large model checkpoints.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and the expected behavior.
+      placeholder: The analysis script fails when...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Exact command, file, and commit.
+      placeholder: |
+        commit:
+        command:
+        traceback:
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, and whether you used the pinned stack.
+      placeholder: "Ubuntu 22.04, Python 3.11, torch 2.2.2+cu121"
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I did not include credentials, private data, or checkpoints.
+          required: true
+        - label: I searched existing issues.
+          required: true

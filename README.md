@@ -1,5 +1,9 @@
 # Class fairness in model-heterogeneous federated learning
 
+[![CI](https://github.com/Paul4805/phofl-class-fairness/actions/workflows/ci.yml/badge.svg)](https://github.com/Paul4805/phofl-class-fairness/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+
 This repository contains the measurement paper, analysis code, notebook, and
 raw result tables for a two-axis fairness audit of model-heterogeneous
 federated learning (MH-FL). It is **not** a new FL method.
@@ -110,3 +114,57 @@ ladder with the `run_step*.py` scripts only if you intend to retrain.
 
 The measurement paper is in `phofl/paper/`. It is deliberately not a method
 paper; the diagnostic ladder is a negative result about reducibility.
+
+## Paper and artifact map
+
+- Paper source: `phofl/paper/` (abstract, introduction, related work, method,
+  results, FedAPEN, diagnostic ladder, discussion, conclusion).
+- Main finding: `phofl/FINDINGS_class_fairness.md`.
+- Ladder negative result: `phofl_method/LADDER_SUMMARY.md`.
+- Analysis tables: `phofl/analysis/`.
+- Result CSVs and per-run logs: `phofl_half/results/`, `phofl_half/logs/`.
+- Figures: `phofl/figures/`.
+- Data/checkpoint policy: `DATA.md`.
+
+## Citation
+
+If you use this repository, please cite it using `CITATION.cff`:
+
+```bibtex
+@software{masillamni2026classfairness,
+  author  = {Masillamni, J Paul},
+  title   = {Class Fairness in Model-Heterogeneous Federated Learning:
+             Measurement and a Diagnostic Ladder},
+  year    = {2026},
+  version = {0.1.0},
+  url     = {https://github.com/Paul4805/phofl-class-fairness},
+  license = {MIT}
+}
+```
+
+## Contributing
+
+See `CONTRIBUTING.md`. This is a measurement repository: analysis,
+reproducibility, and documentation contributions are welcome; new-method
+claims are out of scope.
+
+## Security
+
+See `SECURITY.md`. Report vulnerabilities privately through GitHub Security
+Advisories.
+
+## License
+
+Code and paper artifacts are released under the MIT License; see `LICENSE`.
+
+## Acknowledgements
+
+The experiments build on the PHP-FL and FedAPEN implementations and CIFAR-10.
+See `ACKNOWLEDGEMENTS.md`; the external repositories are not vendored.
+
+## Data availability
+
+Generated CIFAR-10 partitions, checkpoints, scratch model stores, virtual
+environments, and third-party clones are excluded from Git. `DATA.md` lists
+what is excluded, why, and how to regenerate it. Result CSVs, structured logs,
+and figures are included.
