@@ -117,6 +117,7 @@ paper; the diagnostic ladder is a negative result about reducibility.
 
 ## Paper and artifact map
 
+- **Detailed findings PDF:** [`report/PHPFL_Class_Fairness_Report.pdf`](report/PHPFL_Class_Fairness_Report.pdf)
 - Paper source: `phofl/paper/` (abstract, introduction, related work, method,
   results, FedAPEN, diagnostic ladder, discussion, conclusion).
 - Main finding: `phofl/FINDINGS_class_fairness.md`.
