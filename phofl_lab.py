@@ -701,6 +701,8 @@ def make_amp_client_classes():
             max_local_epochs = self.local_epochs
             if self.train_slow:
                 max_local_epochs = np.random.randint(1, max_local_epochs // 2)
+            shared_loss_sum = 0.0
+            shared_n = 0
             for step in range(max_local_epochs):
                 for i, (x, y) in enumerate(trainloader):
                     optimizer.zero_grad()
@@ -740,6 +742,10 @@ def make_amp_client_classes():
                     scaler.step(optimizer)
                     scaler.step(optimizer_g)
                     scaler.update()
+                    # Instrumentation only: FedFV orders clients by training loss.
+                    shared_loss_sum += float(ce_shared.detach().item()) * int(y.shape[0])
+                    shared_n += int(y.shape[0])
+            self.last_train_loss = shared_loss_sum / max(shared_n, 1)
             self.update_ratio = sigmoid(self.sigmoid_k, (self.join_times + 1) * 1.0 / (round + 1))
             self.masks = self.filter_top_p_percent(self.update_ratio * self.tau)
             cp.save_item(model, self.role, "model", self.save_folder_name)
@@ -815,6 +821,11 @@ def sigmoid(k: float, x: float) -> float:
 # Aggregation modes
 # ---------------------------------------------------------------------------
 
+# FedFV hyper-parameters fixed a priori from the paper's CIFAR-10 grid
+# (alpha=0.1 with tau in {0,1,3,10}; tau=3 is near-best and fits 60 rounds).
+FEDFV_ALPHA = 0.1
+FEDFV_TAU = 3
+
 def aggregation_weights(server, mode: str) -> np.ndarray:
     ids = list(server.uploaded_ids)
     if mode in ("plain", "uniform"):
@@ -883,11 +894,118 @@ def _worst_class_recalls(server, gamma: float = 5.0):
     return c_worst, client_recalls
 
 
+def _fedfv_project(deltas, losses, alpha):
+    """FedFV internal-conflict surgery (Wang et al., IJCAI 2021, Alg. 1-2).
+
+    ``deltas`` is an (m, d) tensor of client updates g_k = theta_t - theta_k,
+    ``losses`` the matching training losses.  Clients are processed in
+    ascending-loss order; the first ``floor(alpha*m)`` clients keep their
+    original gradient, matching the paper's alpha parameter (alpha=1 recovers
+    FedAvg, alpha=0 projects every client).
+
+    Returns the mitigated mean update before the norm rescaling of Alg. 1.
+    """
+    m = deltas.shape[0]
+    order = torch.argsort(torch.as_tensor(losses, dtype=torch.float64)).tolist()
+    keep = set(order[: int(np.floor(alpha * m))])
+    g = deltas.clone()
+    norms2 = (deltas * deltas).sum(dim=1)
+    for k in range(m):
+        if k in keep:
+            continue
+        for j in order:
+            if j == k or float(norms2[j]) <= 0.0:
+                continue
+            dot = float((g[k] * deltas[j]).sum())
+            if dot < 0.0:
+                g[k] = g[k] - (dot / float(norms2[j])) * deltas[j]
+    return g.mean(dim=0)
+
+
+def _fedfv_external(g, history, round_idx, selected_ids, tau_ext):
+    """FedFV external-conflict projection (Alg. 3) over the last ``tau_ext`` rounds."""
+    for i in range(tau_ext, 0, -1):
+        target = round_idx - i
+        conflicts = [d for cid, (r_hist, d) in history.items()
+                     if r_hist == target and cid not in selected_ids
+                     and float((g * d).sum()) < 0.0]
+        if not conflicts:
+            continue
+        g_con = torch.stack(conflicts).sum(dim=0)
+        den = float((g_con * g_con).sum())
+        if den > 0.0 and float((g * g_con).sum()) < 0.0:
+            g = g - (float((g * g_con).sum()) / den) * g_con
+    return g
+
+
+def _fedfv_aggregate(server, state, alpha=FEDFV_ALPHA, tau_ext=FEDFV_TAU):
+    """Replace plain averaging with FedFV gradient surgery on the shared model.
+
+    FedFV is defined in parameter space, so it is applied to the model every
+    client shares (the auxiliary/global model); the personalised models are
+    untouched.  This is the only well-defined placement of FedFV in a
+    model-heterogeneous harness.
+    """
+    import flcore.servers.serverphp as sp
+
+    ref_model = sp.load_item(server.role, "global_model", server.save_folder_name)
+    ref = [p.detach().to("cpu", torch.float32).clone() for p in ref_model.parameters()]
+    shapes = [tuple(p.shape) for p in ref]
+    flat_ref = torch.cat([r.reshape(-1) for r in ref])
+
+    ids = list(server.uploaded_ids)
+    deltas, losses = [], []
+    for cid in ids:
+        client = server.clients[cid]
+        cm = sp.load_item(client.role, "global_model", client.save_folder_name)
+        vec = torch.cat([(r - p.detach().to("cpu", torch.float32)).reshape(-1)
+                         for r, p in zip(ref, cm.parameters())])
+        deltas.append(vec)
+        losses.append(float(getattr(client, "last_train_loss", 0.0)))
+        del cm
+    D = torch.stack(deltas)
+
+    g = _fedfv_project(D, losses, alpha)
+    plain = D.mean(dim=0)
+    if tau_ext > 0 and state["round"] >= tau_ext:
+        g = _fedfv_external(g, state["history"], state["round"], set(ids), tau_ext)
+    ng, npn = float(g.norm()), float(plain.norm())
+    if ng > 0.0 and npn > 0.0:
+        g = g * (npn / ng)
+    if state["round"] % 10 == 0:
+        n_keep = int(np.floor(alpha * len(ids)))
+        print(f"[fedfv] round={state['round']} clients={len(ids)} "
+              f"kept={n_keep} losses={[round(v, 4) for v in losses]} "
+              f"g_norm={ng:.4f} plain_norm={npn:.4f}")
+
+    new = flat_ref - g
+    offset = 0
+    for p, shape in zip(ref_model.parameters(), shapes):
+        num = int(np.prod(shape)) if len(shape) else 1
+        p.data.copy_(new[offset:offset + num].reshape(shape).to(p.device))
+        offset += num
+    sp.save_item(ref_model, server.role, "global_model", server.save_folder_name)
+
+    for k, cid in enumerate(ids):
+        state["history"][cid] = (state["round"], D[k].clone())
+    keep_from = state["round"] - tau_ext
+    state["history"] = {cid: (r, d) for cid, (r, d) in state["history"].items()
+                        if r >= keep_from}
+    del ref_model, D, deltas
+    clear_memory()
+
+
 def install_aggregation(mode: str) -> None:
     import flcore.servers.serverphp as sp
 
+    state = {"round": 0, "history": {}}
+
     def aggregate(self):
         assert len(self.uploaded_ids) > 0
+        if mode == "fedfv":
+            _fedfv_aggregate(self, state)
+            state["round"] += 1
+            return
         if mode == "worst_class":
             c_worst, client_recalls = _worst_class_recalls(self, gamma=5.0)
             self._worst_class = c_worst
