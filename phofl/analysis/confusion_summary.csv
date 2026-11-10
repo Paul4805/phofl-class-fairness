@@ -1,0 +1,6 @@
+run,AM,worst_class,worst_recall,dog_recall,cat_recall
+baseline,0.5425,dog,0.251,0.251,0.434
+STEP1_rehearsal,0.5468,dog,0.32,0.32,0.378
+STEP2_confusion,0.5489,dog,0.27,0.27,0.364
+STEP3_worst_agg,0.5539,dog,0.292,0.292,0.407
+STEP4_distill,0.5489,dog,0.282,0.282,0.458

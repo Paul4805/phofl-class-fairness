@@ -384,6 +384,62 @@ story.append(make_table([["run", "client", "arch", "acc", "rare acc"]] + sc[["ru
 story.append(P("Full client x class matrices are in phofl/analysis/matrices and two_axis_client_class.csv.", small))
 story.append(PageBreak())
 
+# Confusion structure
+pairb = pd.read_csv(ROOT / "phofl/analysis/confusion_pair_budget.csv")
+probe = pd.read_csv(ROOT / "phofl/analysis/resolution_probe_cifar.csv")
+story.append(section("Confusion structure and pair error budgets"))
+story.append(P("Full 10x10 matrices, global ensemble over 10 clients, full CIFAR-10 test set", h2))
+story.append(P("Cross error uses only the two off-diagonal cells; joint error is the average "
+               "total error of the two classes, including errors to the other eight classes. "
+               "Cross share is the pair's mutual mass over its total class error.", small))
+RUN_ORDER = ["baseline", "STEP1_rehearsal", "STEP2_confusion", "STEP3_worst_agg", "STEP4_distill"]
+PAIR_ORDER = ["dog-cat", "deer-horse", "automobile-truck"]
+pb = pairb.set_index(["run", "pair"]).loc[[(r, p) for r in RUN_ORDER for p in PAIR_ORDER]].reset_index()
+pb = pb[["run", "pair", "a_to_b_rate", "b_to_a_rate", "cross_error_rate",
+         "all_error_rate", "cross_share_of_class_errors"]].copy()
+for c in ["a_to_b_rate", "b_to_a_rate", "cross_error_rate", "all_error_rate",
+          "cross_share_of_class_errors"]:
+    pb[c] = pb[c].map(lambda x: f"{x:.4f}")
+story.append(make_table([["run", "pair", "a->b", "b->a", "cross", "joint", "cross share"]]
+                        + pb.values.tolist(), [4.4, 4.4, 2.0, 2.0, 2.0, 2.0, 2.4], font=6.4))
+story.append(P("Step 2 lowers dog-cat cross error 15.2% but raises joint error 3.9%; "
+               "dog->bird 0.188 -> 0.213 and cat->bird 0.187 -> 0.220 absorb the mass. "
+               "Step 4 gives the lowest dog+cat joint error (0.6300) with cross error up 6.1%. "
+               "Step 1 halves automobile/truck directional asymmetry (0.135 -> 0.009). "
+               "Deer/horse is not a two-body pair: deer->bird alone is 0.261.", small))
+story.append(figure(FIG / "fig_confusion_matrices.png",
+                    "Row-normalised 10x10 test confusion for baseline and the four ladder rungs."))
+story.append(figure(FIG / "fig_confusion_dogcat.png",
+                    "Dog/cat error budget: pair confusion falls under step 2 while joint class error rises."))
+story.append(PageBreak())
+
+story.append(section("Resolution probe (centralized)"))
+story.append(P("2,000 train / 500 test images per class, one 3-conv CNN, 15 epochs, seed 0. "
+               "CIFAR-10 is natively 32x32, so 64 and 96 are upsampled and add no information.", small))
+pr = probe.sort_values("resolution").copy()
+for c in ["AM", "dog_recall", "cat_recall", "dog_cat_cross_error_rate",
+          "dog_cat_all_error_rate", "deer_horse_cross_error_rate",
+          "auto_truck_cross_error_rate"]:
+    pr[c] = pr[c].map(lambda x: f"{x:.4f}")
+story.append(make_table([["res", "AM", "dog", "cat", "dog+cat cross", "dog+cat joint",
+                          "deer+horse cross", "auto+truck cross"]]
+                        + pr[["resolution", "AM", "dog_recall", "cat_recall",
+                              "dog_cat_cross_error_rate", "dog_cat_all_error_rate",
+                              "deer_horse_cross_error_rate", "auto_truck_cross_error_rate"]]
+                        .values.tolist(), [1.4, 2.0, 1.8, 1.8, 2.6, 2.6, 2.8, 2.8], font=6.4))
+story.append(figure(FIG / "fig_resolution_probe.png",
+                    "Upsampled resolution degrades the probe; pair cross-confusion stays flat."))
+story.append(P("Verdict", h2))
+story.append(P("No confirmed resolution-limited floor and no confirmed label-ambiguity floor. "
+               "The probe cannot test an information floor because 64/96 are upsampled, and it "
+               "degraded as resolution rose. What the data does establish is that at the same "
+               "native 32x32 input a centralized model reaches dog+cat joint error 0.455 against "
+               "the federation's 0.6575, so the federated dog/cat deficit is not a missing-pixel "
+               "problem. Native 96x96 STL-10 (downsampled to 64/32) is the required control. "
+               "Targeted losses mainly move error between directions or out of the pair; the "
+               "best joint improvement is 7.3% and no rung closes a pair.", small))
+story.append(PageBreak())
+
 # Artifacts
 story.append(section("Result artifact index"))
 story.append(P("Committed result files", h2))
@@ -406,6 +462,11 @@ files = [
     ["phofl_method/STEP*_summary.csv", "Ladder per-step summary"],
     ["phofl_method/STEP*_per_class.csv", "Ladder per-class deltas"],
     ["phofl_method/LADDER_SUMMARY.md", "Ladder negative result"],
+    ["phofl/analysis/confusion_matrices/", "10 raw + 10 normalised 10x10 matrices"],
+    ["phofl/analysis/confusion_summary.csv", "Confusion AM and dog/cat recall"],
+    ["phofl/analysis/confusion_pair_budget.csv", "Directional, cross, joint, share per pair"],
+    ["phofl/analysis/resolution_probe_cifar.csv", "32/64/96 centralized probe"],
+    ["phofl/analysis/CONFUSION_RESOLUTION_FINDINGS.md", "Confusion and resolution analysis"],
 ]
 story.append(make_table([["Path", "Contents"]] + files, [7.5, 9.5], align="LEFT", font=6.2))
 story.append(P("Excluded: checkpoints, run_store, generated data, third_party, phofl_pinned, .venv-pinned. See DATA.md.", small))

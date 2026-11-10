@@ -247,9 +247,10 @@ story.append(P(
     "interventions were run: class-balanced rehearsal, confusion-targeted loss, "
     "worst-class-weighted aggregation, and per-class distillation. The largest reduction was "
     "7.9%, from rehearsal. Step 2 is the most informative: it moved dog-to-cat errors in the "
-    "intended direction but shifted the error into cat, leaving the combined dog+cat error "
-    "slightly higher. This is consistent with an information-theoretic floor at CIFAR-10 "
-    "resolution and argues for class_FM as a reporting metric, not an optimization target."
+    "intended direction but shifted the error out of the pair, into bird, leaving the combined "
+    "dog+cat error slightly higher. The full 10x10 matrices and a centralized probe show this "
+    "is an error-allocation and representation problem, not an information floor at 32x32, and "
+    "argue for class_FM as a reporting metric rather than an optimization target."
 ))
 story.append(PageBreak())
 
@@ -611,8 +612,7 @@ story.append(P(
     "(lambda=0.1, margin 1.0). Dog-to-cat errors fell from 0.249 to 0.191 (-23%). But cat "
     "recall fell from 0.434 to 0.364 (-16%), and the combined dog+cat error rate rose from "
     "0.657 to 0.683. The loss moved the decision boundary rather than removing the joint "
-    "error. This is the clearest evidence for an information-theoretic floor at 32x32 "
-    "CIFAR-10 resolution."
+    "error. Section 6.5 shows where the mass went: into bird."
 ))
 story.append(figure(FIG / "fig_step2_dogcat.png",
                     "Step 2 shifts dog/cat errors: dog improves, cat worsens, the combined "
@@ -633,6 +633,62 @@ story.append(P(
     "best-dog architecture did not change. This is the strongest mechanism-specific result, "
     "but still far from closure."
 ))
+
+story.append(subsection("6.5 Full confusion matrices and the resolution probe"))
+story.append(P(
+    "The per-class recalls above were supplemented with the full 10x10 confusion matrix of the "
+    "global ensemble on the complete CIFAR-10 test set, for the baseline and all four rungs. "
+    "The matrices make the Step 2 mechanism explicit: dog-to-cat fell 0.250 to 0.192, but "
+    "dog-to-bird rose 0.188 to 0.213 and cat-to-bird 0.187 to 0.220. The pair loss did not "
+    "remove error; it pushed the ambiguous animal mass into the neighbouring bird class. Dog's "
+    "total error barely moved (0.749 to 0.730) and cat's worsened (0.566 to 0.636)."
+))
+pair_budget = pd.read_csv(ROOT / "phofl/analysis/confusion_pair_budget.csv")
+RUN_ORDER = ["baseline", "STEP1_rehearsal", "STEP2_confusion", "STEP3_worst_agg", "STEP4_distill"]
+PAIR_ORDER = ["dog-cat", "deer-horse", "automobile-truck"]
+pb = (pair_budget.set_index(["run", "pair"])
+      .loc[[(r, p) for r in RUN_ORDER for p in PAIR_ORDER]].reset_index())
+pb = pb[["run", "pair", "a_to_b_rate", "b_to_a_rate", "cross_error_rate",
+         "all_error_rate", "cross_share_of_class_errors"]].copy()
+for c in ["a_to_b_rate", "b_to_a_rate", "cross_error_rate", "all_error_rate",
+          "cross_share_of_class_errors"]:
+    pb[c] = pb[c].map(lambda x: f"{x:.4f}")
+story.append(make_table(
+    [["run", "pair", "a->b", "b->a", "cross", "joint", "cross share"]] + pb.values.tolist(),
+    [4.4, 4.4, 2.0, 2.0, 2.0, 2.0, 2.4], font=6.6))
+story.append(P(
+    "Cross uses only the pair's two off-diagonal cells; joint is the mean total error of the "
+    "two classes, including errors to the other eight. Step 4 gives the lowest dog+cat joint "
+    "error (0.6300) but its dog-cat cross error rises 6.1%. Step 1 halves automobile/truck "
+    "directional asymmetry (0.135 to 0.009): a genuine rebalancing. Deer/horse is not a "
+    "two-body pair; only 15% of its joint error is mutual, and deer-to-bird alone is 0.261.",
+    small))
+story.append(figure(FIG / "fig_confusion_dogcat.png",
+                    "Dog/cat error budget: pair confusion falls under Step 2 while joint "
+                    "class error rises.", CONTENT_W * 0.86))
+resolution = pd.read_csv(ROOT / "phofl/analysis/resolution_probe_cifar.csv").sort_values("resolution")
+story.append(P(
+    "A separate centralized probe (2,000 train / 500 test per class, one 3-conv CNN, 15 "
+    "epochs, seed 0) measured the same pair at 32, 64 and 96 pixels. CIFAR-10 is natively "
+    "32x32, so 64 and 96 are upsampled and add no information. The probe degrades as "
+    "resolution rises, and dog-cat cross-confusion stays flat (0.185 / 0.195 / 0.188).",
+    small))
+rt = resolution.copy()
+for c in ["AM", "dog_recall", "cat_recall", "dog_cat_cross_error_rate", "dog_cat_all_error_rate"]:
+    rt[c] = rt[c].map(lambda x: f"{x:.4f}")
+story.append(make_table(
+    [["resolution", "AM", "dog recall", "cat recall", "dog+cat cross", "dog+cat joint"]]
+    + rt[["resolution", "AM", "dog_recall", "cat_recall",
+          "dog_cat_cross_error_rate", "dog_cat_all_error_rate"]].values.tolist(),
+    [3.0, 3.0, 3.2, 3.2, 3.4, 3.4], font=6.8))
+story.append(P(
+    "The probe cannot test an information floor, because upsampling does not add pixels of "
+    "information. What it does establish is that a centralized model on the same native 32x32 "
+    "input reaches dog+cat joint error 0.455 against the federation's 0.6575. The federated "
+    "dog/cat deficit is therefore not a missing-pixel problem. Whether the centralized residual "
+    "0.455 is resolution-limited or label-limited requires native 96x96 data (STL-10 "
+    "downsampled to 64 and 32); the attempted download was abandoned incomplete.",
+    small))
 
 # 7. Interesting results
 story.append(section(7, "What is interesting"))
@@ -662,9 +718,11 @@ story.append(bullet(
     "seed. The gap is not a simple optimization failure."
 ))
 story.append(bullet(
-    "<b>6. The confusion loss is zero-sum.</b> Dog-to-cat errors fall 23%, cat recall falls "
-    "16%, and the combined error rises. That is an error-allocation signature, consistent "
-    "with an information-theoretic floor at CIFAR-10 resolution."
+    "<b>6. The confusion loss displaces error.</b> Dog-to-cat errors fall 23%, cat recall "
+    "falls 16%, and the combined error rises. The 10x10 matrices show dog-to-bird 0.188 to "
+    "0.213 and cat-to-bird 0.187 to 0.220: the pair's error moved out of the pair rather than "
+    "being removed. A centralized 32x32 probe reaches less than half the federated dog+cat "
+    "joint error, so this is not an information floor at input resolution."
 ))
 story.append(bullet(
     "<b>7. Standalone's raw gap advantage is an AM effect.</b> Its gap is smaller (38.6 vs "
@@ -706,8 +764,9 @@ story.append(bullet(
 ))
 story.append(bullet(
     "<b>Descriptive, not causal.</b> The analysis does not identify why dog/cat/deer/horse are "
-    "weak. The information-floor interpretation is a hypothesis motivated by Step 2, not a "
-    "proven mechanism."
+    "weak. The confusion audit locates the errors (one animal cluster plus automobile/truck) "
+    "but does not establish the mechanism. The label-ambiguity interpretation of the residual "
+    "centralized error is untested, because the CIFAR 64/96 probe is upsampled."
 ))
 
 # 9. Future directions
@@ -717,19 +776,20 @@ story.append(P(
     "method; it is to test the mechanism behind the zero-sum result and to make the reporting "
     "practice standard."
 ))
-story.append(subsection("9.1 Primary: resolution sweep and pairwise error budget"))
+story.append(subsection("9.1 Completed: resolution probe and pairwise error budget"))
 story.append(P(
-    "The Step 2 result suggests that dog and cat are confusable at 32x32. A clean test is to "
-    "measure the full 10x10 confusion matrix at 32, 64, and 96 pixels on a small centralized "
-    "probe. If the joint dog+cat error stays flat at 32 but falls at higher resolution, the "
-    "floor is resolution-limited. If it stays flat even at higher resolution, the ambiguity is "
-    "in the labels/data rather than the input resolution."
+    "The resolution sweep and the pairwise budget are now done and reported in Section 6.5. "
+    "The pair budget shows that targeted losses displace error more often than they remove it, "
+    "and that deer/horse is not primarily a pair problem at all. The CIFAR probe cannot settle "
+    "the information-floor question because 32x32 data cannot be upsampled into new "
+    "information, and the probe degraded as resolution rose."
 ))
 story.append(P(
-    "The same analysis should be repeated for other class pairs (deer/horse, automobile/truck). "
-    "If targeted losses always move error between directions without reducing the pair sum, "
-    "the claim becomes stronger: some class gaps are an error-allocation problem, not an "
-    "accuracy problem."
+    "The remaining primary experiment is a native high-resolution control: STL-10, natively "
+    "96x96, downsampled to 64 and 32 so the same scenes are presented at three genuine "
+    "information levels. Only then can a resolution-limited floor be separated from "
+    "label ambiguity. A label audit of dog/cat/deer/bird images is the fallback if the native "
+    "control still shows flat pair confusion."
 ))
 story.append(subsection("9.2 Zero-training: architecture decomposition"))
 story.append(P(
@@ -769,7 +829,8 @@ story.append(P(
 story.append(KeepTogether([make_table([
     ["Path", "Contents"],
     ["phofl/paper/", "Abstract through conclusion (sections 00-07)"],
-    ["phofl/analysis/", "Client x class matrices, support filtering, AM normalization, ranks"],
+    ["phofl/analysis/", "Client x class matrices, support filtering, AM normalization, ranks, "
+                        "10x10 confusion matrices, pair error budgets, resolution probe"],
     ["phofl_method/", "Ladder per-step CSVs, findings, LADDER_SUMMARY.md"],
     ["phofl_half/results/", "Half-scale result CSVs"],
     ["phofl_half/logs/", "Per-run round metrics and histories"],
@@ -778,6 +839,8 @@ story.append(KeepTogether([make_table([
     ["phofl_experiments.ipynb", "Resumable A/B/C notebook"],
     ["phofl_lab.py", "Runtime harness"],
     ["analyze_two_axis.py", "Rebuilds the 2-D analysis"],
+    ["analyze_confusion.py", "Builds the 10x10 matrices and pair budget"],
+    ["resolution_probe.py", "Centralized 32/64/96 probe"],
     ["run_step1.py ... run_step4.py", "Diagnostic ladder"],
 ], [5.0, 12.0], align="LEFT"), Spacer(1, 0.2 * cm)]))
 story.append(Spacer(1, 0.2 * cm))
@@ -789,6 +852,7 @@ story.append(P(
 story.append(subsection("10.1 Key commands"))
 story.append(P("Rebuild the committed analysis without training:", body_left))
 story.append(P("python analyze_two_axis.py", code))
+story.append(P("python analyze_confusion.py", code))
 story.append(P("python make_final_table.py", code))
 story.append(P("python -m pytest -q", code))
 story.append(Spacer(1, 0.4 * cm))

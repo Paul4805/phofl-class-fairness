@@ -14,13 +14,17 @@ seed, four CNNs, one local epoch, 2,500 train / 500 test per client.
 **Negative result.** No rung reached the pre-declared 30% class-gap reduction
 threshold; the best was 7.9% from class-balanced rehearsal. Step 2 is the
 clearest mechanism: dog→cat errors fell 0.249→0.191, but cat recall fell
-0.434→0.364 and the combined dog+cat error rose 0.657→0.683, so the loss
-shifted errors rather than removing them. This is consistent with an
-information-theoretic floor at CIFAR-10 resolution: class_FM is a reporting
-metric, not an objective that a scalar penalty reliably minimizes.
+0.434→0.364 and the combined dog+cat error rose 0.657→0.683. The 10×10
+matrices show the displacement target: dog→bird 0.188→0.213 and cat→bird
+0.187→0.220. The loss moved error out of the pair rather than removing it.
+`class_FM` is a reporting metric, not an objective that a scalar penalty
+reliably minimizes.
 
 **No method contribution is claimed.**
 
 A follow-up could test whether higher-resolution datasets show a reducible
-class gap; the present evidence only establishes the diagnostic failure at
-32×32 CIFAR-10.
+class gap. Native high-resolution data is required: a centralized 32×32 probe
+already reaches dog+cat joint error 0.455 against the federation's 0.657, so
+the federated deficit is not an input-resolution effect and the upsampled
+CIFAR 64/96 probe cannot test an information floor. See
+`phofl/analysis/CONFUSION_RESOLUTION_FINDINGS.md`.

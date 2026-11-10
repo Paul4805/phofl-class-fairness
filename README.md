@@ -34,16 +34,25 @@ The diagnostic ladder reduced the gap by at most **7.9%** over one seed:
 
 Step 2 is the clearest negative signal: dog→cat errors fell 0.249→0.191, but
 cat recall fell 0.434→0.364, and the combined dog+cat error rose
-0.657→0.683. This is consistent with an information-theoretic floor at
-CIFAR-10 resolution. The paper proposes `class_FM` as a **reporting metric**,
-not a training objective.
+0.657→0.683. Full 10×10 confusion matrices show where the mass went:
+dog→bird rose 0.188→0.213 and cat→bird 0.187→0.220, so the pair loss
+displaced error out of the pair instead of removing it. No rung lowers a
+pair's joint error by more than 8%. The paper proposes `class_FM` as a
+**reporting metric**, not a training objective.
+
+A centralized 32×32 probe reaches dog+cat joint error 0.455 against the
+federation's 0.6575 on the same pixels, so the federated dog/cat deficit is
+not a resolution problem. The upsampled 64/96 probe degrades and cannot test
+an information floor; native 96×96 STL-10 is the required control. See
+`phofl/analysis/CONFUSION_RESOLUTION_FINDINGS.md`.
 
 ## What is included
 
 - `phofl/paper/` — abstract, introduction, related work, method, results,
   FedAPEN section, ladder section, discussion, conclusion.
 - `phofl/analysis/` — 2-D client×class matrices, support-filtered analysis,
-  AM-normalized analysis, ranking tables, and FedAPEN scope.
+  AM-normalized analysis, ranking tables, FedAPEN scope, full 10×10 confusion
+  matrices, pair error budgets, and the resolution-probe analysis.
 - `phofl_method/` — per-step ladder CSVs, findings, and `LADDER_SUMMARY.md`.
 - `phofl_half/results/` — CIFAR-10 half-scale result CSVs.
 - `phofl_half/logs/` — per-run round metrics and histories.

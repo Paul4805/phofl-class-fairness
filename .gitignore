@@ -17,6 +17,7 @@ Thumbs.db
 third_party/
 
 # Generated data
+phofl/analysis/stl10/
 phofl_half/data/
 phofl_half/data_cap/
 phofl_half/run_store/

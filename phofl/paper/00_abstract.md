@@ -12,8 +12,11 @@ additionally show that standard FL interventions (class-balanced rehearsal,
 confusion-aware losses, worst-class-weighted aggregation, and per-class
 distillation) reduce the gap by at most 7.9% over one seed, and that a
 confusion-aware loss shifts errors between dog and cat without reducing their
-combined rate, indicating an information-theoretic floor at CIFAR-10
-resolution. We propose
+combined rate: full 10×10 matrices show the displaced mass reappearing as
+dog/cat→bird confusion. A centralized 32×32 probe reaches half the federated
+dog+cat joint error on the same pixels, so this is not an information floor at
+CIFAR-10 resolution; the upsampled 64/96 probe degrades and cannot test one.
+We propose
 **class-balanced FM** (`class_FM`), the standard deviation of per-class mean
 recall, as a mandatory reporting metric alongside client-FM and worst-class
 recall. `class_FM` is a reporting metric, not a training method. Support

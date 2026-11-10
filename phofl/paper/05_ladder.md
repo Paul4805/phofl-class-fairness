@@ -41,12 +41,15 @@ baseline: (1 - 0.251 + 1 - 0.434) / 2 = 0.657
 method:   (1 - 0.270 + 1 - 0.364) / 2 = 0.683
 ```
 
-The loss shifted errors between the two classes rather than removing them.
-This is the signature of an **information-theoretic floor** at CIFAR-10
-resolution: the dog/cat distinction is not linearly separable in the features
-available at 32×32, so a local penalty can move the decision boundary but
-cannot reduce the joint error. The class gap may even worsen because the
-boundary moves away from the majority class.
+The loss shifted errors out of the pair rather than removing them. The full
+10×10 matrices show where the mass went: dog→bird rose 0.188→0.213 and
+cat→bird 0.187→0.220, so the pair's errors were displaced into the
+neighbouring bird class. Dog's total error barely moved (0.749→0.730) and
+cat's worsened (0.566→0.636). This is not evidence of a resolution floor: a
+centralized 32×32 probe reaches dog+cat joint error 0.455 against the
+federation's 0.657, so the same pixels support a much lower joint error. The
+constraint is in the federated representation and the decision boundary, not
+in the input grid. See `phofl/analysis/CONFUSION_RESOLUTION_FINDINGS.md`.
 
 ## 5.3 Worst-class-weighted aggregation: the specified signal is weak
 
