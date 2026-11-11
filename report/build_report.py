@@ -28,6 +28,10 @@ rank = pd.read_csv(ROOT / "phofl/analysis/ranking_disagreement.csv")
 am = pd.read_csv(ROOT / "phofl/analysis/am_normalization.csv")
 perclass = pd.read_csv(ROOT / "phofl/analysis/two_axis_class_recall.csv")
 support = pd.read_csv(ROOT / "phofl/analysis/support_exclusions_summary.csv")
+seed = pd.read_csv(ROOT / "phofl/analysis/seed_sweep_summary.csv")
+seed["_o"] = seed.apply(
+    lambda r: ["PHPFL", "FedAPEN", "FedFV", "Standalone"].index(r["method"]), axis=1)
+seed = seed.sort_values(["_o", "pattern"]).drop(columns="_o")
 steps = []
 for i in range(1, 5):
     steps.append(pd.read_csv(ROOT / f"phofl_method/STEP{i}_summary.csv").iloc[0])
@@ -193,8 +197,9 @@ story.append(P("Repository: github.com/Paul4805/phofl-class-fairness", cover_met
 story.append(P("Artifacts: phofl/analysis, phofl/paper, phofl_method, phofl_half", cover_meta))
 story.append(Spacer(1, 1.1 * cm))
 story.append(box("The short version", [
-    "Client-FM - the usual standard deviation of per-client accuracy - hides a <b>44.3-point</b> best-to-worst class-recall spread in the PHP-FL/linear run.",
-    "FedAPEN/linear has a <b>52.9-point</b> gap, so the observation is field-wide across the two MH-FL methods tested, not universal across all FL.",
+    "Client-FM - the usual standard deviation of per-client accuracy - hides a <b>0.39 +/- 0.08</b> best-to-worst class-recall spread in PHP-FL/linear over three seeds.",
+    "The single-seed 44.3-point figure was a high draw; PHP-FL/linear spans 0.316-0.468 across seeds.",
+    "FedAPEN/linear is consistently worse: <b>0.60 +/- 0.09</b>, 6/6 per-seed comparisons, so the observation is field-wide across the two MH-FL methods tested.",
     "A four-rung diagnostic ladder (rehearsal, confusion loss, worst-class aggregation, per-class distillation) reduced the gap by at most <b>7.9%</b> over one seed.",
     "Step 2 is the clearest mechanism: dog-to-cat errors fell 23%, but cat recall fell 16%, and the combined dog+cat error rose 0.657 -> 0.683.",
     "class_FM is a <b>reporting metric</b>, not a training objective. No method contribution is claimed.",
@@ -230,17 +235,18 @@ story.append(P(
     "well balanced across clients while leaving a large semantic class spread."
 ))
 story.append(P(
-    "On the half-scale CIFAR-10 setup, PHP-FL/linear has client-FM 0.0785 and a class gap "
-    "of 44.3 points: frog recall is 69.4% while dog recall is 25.1%. The single best "
-    "client-FM run (PHP-FL/entropy, FM=0.0763) is slightly worse on the class axis at 45.6 "
-    "points. FedAPEN/linear reaches 52.9 points. Because FedAPEN crosses the pre-registered "
-    "30-point scope threshold, the finding is field-wide across the two MH-FL methods in "
-    "this study, but it is not a universal claim about all FL."
+    "On the half-scale CIFAR-10 setup, PHP-FL/linear has client-FM 0.0860 and a class gap "
+    "of <b>0.39 +/- 0.08</b> over three seeds, with seed 0 at 0.468. The single best "
+    "client-FM cell (FedAPEN/linear, FM=0.0779) is the worst on the class axis at "
+    "0.60 +/- 0.09. Because FedAPEN crosses the pre-registered 30-point scope threshold in "
+    "every seed and is worse than PHP-FL in 6/6 per-seed comparisons, the finding is "
+    "field-wide across the two MH-FL methods in this study, but it is not a universal claim "
+    "about all FL."
 ))
 story.append(P(
-    "The five runs also order differently on the two axes: FedAPEN is 3rd by client-FM but "
-    "5th by class gap, while Standalone/linear is 4th by client-FM but 1st by class gap. "
-    "This is an observation on five runs, not a rank-correlation claim."
+    "The eight cells also order differently on the two axes: the worst-gap cell is also the "
+    "best-client-FM cell in two of three seeds. With three seeds this is a replicated "
+    "ordering observation, not a rank-correlation claim."
 ))
 story.append(P(
     "The diagnostic ladder was designed to test whether the gap is reducible. Four standard "
@@ -478,10 +484,11 @@ story.append(figure(ROOT / "phofl/figures/C_participation_tail.png",
 story.append(section(5, "Two-axis fairness on CIFAR-10"))
 story.append(P(
     "The central measurement result is the client-by-class matrix. Client-FM is the row-mean "
-    "dispersion; class_std and worst-class recall are the column summaries. The five-run "
-    "table below is the core evidence."
+    "dispersion; class_std and worst-class recall are the column summaries. The table below is "
+    "the original seed-0 measurement; subsection 5.1 gives the three-seed replication that "
+    "supersedes its point estimates."
 ))
-tbl = [["Run", "AM", "client-FM", "class_std", "class gap", "worst class", "worst recall"]]
+tbl = [["Run (seed 0)", "AM", "client-FM", "class_std", "class gap", "worst class", "worst recall"]]
 for _, r in summary.iterrows():
     tbl.append([r["label"], f"{r['AM']:.4f}", f"{r['client_FM']:.4f}",
                 f"{r['class_std']:.4f}", f"{r['class_gap']:.4f}",
@@ -489,81 +496,97 @@ for _, r in summary.iterrows():
 story.append(make_table(tbl, [3.5, 2.5, 3.0, 3.0, 3.0, 3.2, 3.2]))
 story.append(Spacer(1, 0.2 * cm))
 story.append(P(
-    "The conservative headline is 44.3 points in PHP-FL/linear: frog 69.4%, dog 25.1%. The "
-    "single best client-FM run is PHP-FL/entropy (0.0763) at 45.6 points. FedAPEN/linear is "
-    "52.9 points. The failure is not a single-class artifact: dog, cat, deer, and horse form "
-    "a broad weak region."
+    "Seed 0 gave 44.3 points in PHP-FL/linear (frog 69.4%, dog 25.1%) and 52.9 for "
+    "FedAPEN/linear. Those are single draws: re-running the same cells on seeds 1 and 2 moves "
+    "PHP-FL/linear to 0.316 and 0.376 and FedAPEN/linear to 0.558 and 0.700. The failure is "
+    "not a single-class artifact: dog, cat, deer, and horse form a broad weak region."
 ))
 story.append(figure(FIG / "fig_two_axis.png",
-                    "Client-FM and class gap on the same five runs. The bars are ordered by "
-                    "client-FM on the left; the class axis on the right does not follow that order."))
+                    "Client-FM and class gap at seed 0. The bars are ordered by client-FM on "
+                    "the left; the class axis on the right does not follow that order."))
 story.append(figure(FIG / "fig_per_class_heatmap.png",
-                    "Per-class recall. Rows are runs; columns are classes. The weak region is "
-                    "dog/cat/deer/horse, not one isolated cell.", CONTENT_W * 0.95))
-story.append(subsection("5.1 Support filtering"))
+                    "Per-class recall at seed 0. Rows are runs; columns are classes. The weak "
+                    "region is dog/cat/deer/horse, not one isolated cell.", CONTENT_W * 0.95))
+
+story.append(subsection("5.1 Three-seed replication"))
+story.append(P(
+    "Eight cells (PHP-FL, FedAPEN, FedFV, Standalone x linear/entropy) were re-run on seeds 0, "
+    "1 and 2 under one stack (torch 2.14.1), 24 runs in total. Class gap is mean +/- sample sd. "
+    "The seed-0 runs were repeated on this stack so the three seeds are comparable; the pinned "
+    "seed-0 artifacts differ by at most 0.005 AM and 0.012 client-FM."
+))
+seedtbl = [["Method / pattern", "AM", "client-FM", "class gap", "worst recall"]]
+for _, r in seed.iterrows():
+    seedtbl.append([f"{r['method']} / {r['pattern'].replace('_correlated', '')}",
+                    f"{r['AM_mean']:.4f} +/- {r['AM_sd']:.4f}",
+                    f"{r['FM_mean']:.4f} +/- {r['FM_sd']:.4f}",
+                    f"{r['class_gap_mean']:.4f} +/- {r['class_gap_sd']:.4f}",
+                    f"{r['worst_recall_mean']:.3f}"])
+story.append(make_table(seedtbl, [4.6, 3.3, 3.3, 3.6, 2.8], font=6.8))
+story.append(Spacer(1, 0.2 * cm))
+story.append(P(
+    "Three consequences. First, seed variance is first-order: PHP-FL/linear spans 0.316-0.468 "
+    "and FedAPEN/linear spans 0.547-0.700, so a single-seed gap is a draw, not a measurement. "
+    "Second, PHP-FL has no class-gap advantage over Standalone (0.387 vs 0.389; per-seed "
+    "differences +0.071, -0.051, -0.026 change sign), so the earlier AM-normalization argument "
+    "is moot. Third, FedAPEN is worse than PHP-FL in 6/6 per-seed comparisons (penalty 6-32 "
+    "points), which is the only ordering that survives reseeding. FedFV/linear has the best "
+    "mean gap (0.353) and worst-class recall (0.346), but its 3.4-point edge over PHP-FL is "
+    "inside the seed noise (3/3 sign, two-sided sign test p=0.25); it is reported as a "
+    "directional observation, not a fix.",
+    small))
+story.append(figure(FIG / "fig_seed_gap.png",
+                    "Per-seed class gap for every cell. Dots are seeds; the bar is the mean. "
+                    "PHP-FL and Standalone overlap; FedAPEN is separated upward.", CONTENT_W * 0.95))
+
+story.append(subsection("5.2 Support filtering"))
 story.append(P(
     "Per-client class cells are sparse: 34/100 cells per run have fewer than 10 test samples, "
     "170 cells across five runs, including 45 zero-sample cells. These are listed in "
     "<font name='Courier'>low_support_cells.csv</font> and excluded from the worst-cell "
     "calculation. The worst supported cell is still 0.0 (client 0, cat, 11 samples) in every "
     "run. It is sparse but above threshold and is not the headline. Computing class means "
-    "only from supported cells gives a 51.3-point gap for PHP-FL/linear, a 45.0-point gap for "
-    "PHP-FL/entropy, and a 41.6-point gap for FedAPEN; 44.3 is conservative."
+    "only from supported cells gives a 51.3-point gap for PHP-FL/linear at seed 0, a "
+    "45.0-point gap for PHP-FL/entropy, and a 41.6-point gap for FedAPEN; the seed-0 gap was "
+    "therefore conservative. The three-seed table is computed from the full test set."
 ))
-story.append(subsection("5.2 Rankings disagree"))
-story.append(make_table([
-    ["Run", "client-FM", "FM rank", "class gap", "gap rank"],
-    ["PHPFL/ent", "0.0763", "1", "0.456", "4"],
-    ["PHPFL/lin", "0.0785", "2", "0.443", "3"],
-    ["FedAPEN/lin", "0.0839", "3", "0.529", "5"],
-    ["Standalone/lin", "0.0962", "4", "0.386", "1"],
-    ["Standalone/ent", "0.0985", "5", "0.389", "2"],
-], [4.0, 3.2, 2.7, 3.2, 2.7]))
-story.append(Spacer(1, 0.2 * cm))
+story.append(subsection("5.3 Rankings disagree"))
 story.append(P(
-    "The two metrics order the five runs differently. FedAPEN is 3rd by client-FM but 5th by "
-    "class gap; Standalone/linear is 4th by client-FM but 1st by class gap. This is an "
-    "observation on five runs, not a rank-correlation claim: n=5 is too small to test whether "
-    "the disagreement is systematic."
+    "At seed 0 the two metrics ordered the five original runs in opposite directions. With "
+    "eight cells over three seeds the inversion is stronger: the worst-gap cell is "
+    "FedAPEN/linear in all three seeds, and it is also the best-client-FM cell in seeds 0 and "
+    "2 (PHP-FL/linear takes best client-FM at seed 1). A leaderboard sorted by client-FM "
+    "therefore selects, two times out of three, the run with the worst class gap."
 ))
 story.append(figure(FIG / "fig_ranking_scatter.png",
-                    "The same five runs in the client-FM / class-gap plane. The ordering is not "
-                    "monotone; the two axes disagree.", CONTENT_W * 0.82))
-story.append(subsection("5.3 Pattern invariance"))
+                    "Seed-0 runs in the client-FM / class-gap plane. The ordering is not "
+                    "monotone; the two axes disagree, and the reversal repeats across seeds.",
+                    CONTENT_W * 0.82))
+story.append(subsection("5.4 The pattern effect is method-dependent"))
 story.append(P(
-    "Class-std is roughly invariant to the participation pattern within a method: PHP-FL "
-    "0.1334 -> 0.1349 (change 0.0015) and Standalone 0.1281 -> 0.1196 (change 0.0084). The "
-    "class gap changes by about 1.3 points for PHP-FL and 0.3 points for Standalone. The "
-    "class imbalance is structural; the linear-vs-entropy sampler does not materially create "
-    "or remove it."
+    "The seed-0 reading that class-std is almost invariant to the participation pattern does "
+    "not replicate. Across three seeds the entropy-minus-linear gap is +0.015/+0.033/+0.012 for "
+    "Standalone (worse 3/3), +0.069/+0.108/+0.064 for FedFV (worse 3/3), mixed for PHP-FL "
+    "(-0.042/+0.076/+0.031), and -0.037/-0.108/-0.147 for FedAPEN (better 3/3). The class gap "
+    "is large under both patterns, but the sampler interacts with the aggregation rule rather "
+    "than acting as a neutral nuisance."
 ))
-story.append(subsection("5.4 AM normalization and the Standalone caveat"))
-story.append(make_table([
-    ["Run", "AM", "raw gap/AM", "support gap/AM"],
-    ["PHPFL/ent", "0.6308", "0.723", "0.713"],
-    ["PHPFL/lin", "0.6320", "0.701", "0.811"],
-    ["FedAPEN/lin", "0.6209", "0.852", "0.670"],
-    ["Standalone/lin", "0.5429", "0.711", "0.645"],
-    ["Standalone/ent", "0.5467", "0.712", "0.648"],
-], [4.0, 3.0, 4.6, 4.6]))
-story.append(Spacer(1, 0.2 * cm))
+story.append(subsection("5.5 AM normalization is superseded"))
 story.append(P(
-    "Standalone has a smaller raw class gap (38.6 vs 44.3), but its AM is much lower. After "
-    "normalizing the raw gap by AM, Standalone's advantage disappears (0.711 vs 0.701 for "
-    "PHP-FL/linear). We therefore do not claim a Standalone class-fairness advantage. The "
-    "support-filtered gap/AM is lower for Standalone, but it is reported only as a "
-    "sensitivity, not the headline. The PHP-FL vs FedAPEN inversion is AM-independent: "
-    "FedAPEN is 3rd by client-FM and 5th by gap/AM."
+    "The earlier gap/AM adjustment assumed Standalone's raw gap was smaller (38.6 vs 44.3). "
+    "With three seeds the raw gaps are tied (0.389 vs 0.387), so there is nothing to normalize "
+    "away and we drop the Standalone class-fairness discussion entirely rather than report a "
+    "normalized version of a difference that is not there. The PHP-FL vs FedAPEN inversion is "
+    "AM-independent: FedAPEN still has the best client-FM and the worst class gap."
 ))
-story.append(figure(FIG / "fig_am_norm.png",
-                    "AM-normalized gap. The raw Standalone advantage is removed by AM "
-                    "normalization; the PHP-FL/FedAPEN inversion survives."))
-story.append(subsection("5.5 FedAPEN and the field-wide scope"))
+story.append(subsection("5.6 FedAPEN and the field-wide scope"))
 story.append(P(
-    "FedAPEN/linear has a 52.9-point raw class gap (cat 25.6%, frog 78.5%) and a 41.6-point "
-    "support-filtered gap. The pre-registered rule was: >30 points promotes to field-wide, "
-    "<20 narrows to PHP-FL, 20-30 is mixed. At 52.9, the claim is field-wide across the two "
-    "MH-FL methods tested (PHP-FL and FedAPEN), not universal across all FL."
+    "FedAPEN/linear has a 0.60 +/- 0.09 class gap and FedAPEN/entropy 0.50 +/- 0.05; the "
+    "seed-0 support-filtered gap was 41.6 points. The pre-registered rule was: >30 points "
+    "promotes to field-wide, <20 narrows to PHP-FL, 20-30 is mixed. Every seed crosses 30 "
+    "points and FedAPEN is worse than PHP-FL in all six method-pattern comparisons, so the "
+    "claim is field-wide across the two MH-FL methods tested (PHP-FL and FedAPEN), not "
+    "universal across all FL."
 ))
 
 # 6. Ladder
@@ -693,24 +716,25 @@ story.append(P(
 # 7. Interesting results
 story.append(section(7, "What is interesting"))
 story.append(bullet(
-    "<b>1. A 44.3-point class gap in a good client-FM run.</b> Client-FM 0.0785 coexists with "
-    "frog 69.4% and dog 25.1%. The best client-FM run is worse on the class axis at 45.6 "
-    "points. A leaderboard sorted by FM would hide the failure."
+    "<b>1. A large class gap in a good client-FM run.</b> PHP-FL/linear has client-FM 0.086 "
+    "and a class gap of 0.39 +/- 0.08 over three seeds (seed 0: 0.468, frog 69.4% vs dog "
+    "25.1%). A leaderboard sorted by FM would hide the failure."
 ))
 story.append(bullet(
-    "<b>2. FedAPEN makes the finding field-wide across two MH-FL methods.</b> Its gap is 52.9 "
-    "points, above the pre-registered 30-point scope threshold. This is not a universal FL "
-    "claim; it is field-wide across PHP-FL and FedAPEN."
+    "<b>2. FedAPEN makes the finding field-wide and is consistently worse.</b> Its gap is "
+    "0.60 +/- 0.09, above the pre-registered 30-point threshold in every seed, and it loses "
+    "to PHP-FL in 6/6 per-seed comparisons. This is not a universal FL claim; it is field-wide "
+    "across PHP-FL and FedAPEN."
 ))
 story.append(bullet(
-    "<b>3. The two axes order the runs differently.</b> FedAPEN is 3rd by client-FM but 5th "
-    "by class gap; Standalone/linear is 4th by client-FM but 1st by class gap. With five runs "
-    "this is an observation, not a systematic correlation."
+    "<b>3. The two axes order the runs differently, every seed.</b> The worst-gap cell is "
+    "FedAPEN/linear in all three seeds and the best-client-FM cell in two of three. With three "
+    "seeds this is a replicated ordering, not a correlation claim."
 ))
 story.append(bullet(
-    "<b>4. The class bias is structural.</b> Changing linear to entropy changes class-std by "
-    "0.0015 for PHP-FL and 0.0084 for Standalone. Participation is not the main driver of the "
-    "class axis in these models."
+    "<b>4. The pattern effect is method-dependent, not structural.</b> Entropy-minus-linear "
+    "moves the gap by up to 15 points: worse for Standalone (3/3) and FedFV (3/3), mixed for "
+    "PHP-FL, better for FedAPEN (3/3). Participation is not a neutral nuisance."
 ))
 story.append(bullet(
     "<b>5. Four standard interventions do not close the gap.</b> Rehearsal, confusion loss, "
@@ -725,15 +749,17 @@ story.append(bullet(
     "joint error, so this is not an information floor at input resolution."
 ))
 story.append(bullet(
-    "<b>7. Standalone's raw gap advantage is an AM effect.</b> Its gap is smaller (38.6 vs "
-    "44.3), but gap/AM is 0.711 vs 0.701 after normalization. The raw claim is dropped; the "
-    "support-filtered variant is a sensitivity, not a headline."
+    "<b>7. Standalone is tied with PHP-FL on the class axis.</b> Three seeds give 0.389 +/- "
+    "0.019 vs 0.387 +/- 0.077, with per-seed differences changing sign. Standalone pays 8.6 AM "
+    "points and gains nothing on the class axis; the earlier gap/AM adjustment is dropped "
+    "because there is no raw difference to adjust."
 ))
 story.append(P(
-    "The most interesting single result is not the 44-point number by itself. It is the "
-    "combination of the rank disagreement and the zero-sum confusion result: the class axis "
-    "is a real, separate fairness object, and one of the most natural ways to attack it "
-    "moves errors rather than removing them."
+    "The most interesting single result is not the 39-point mean by itself. It is the "
+    "combination of the rank disagreement, the seed instability, and the zero-sum confusion "
+    "result: the class axis is a real, separate fairness object, its magnitude is "
+    "seed-dependent, and one of the most natural ways to attack it moves errors rather than "
+    "removing them."
 ))
 
 # 8. Limitations
@@ -744,18 +770,18 @@ story.append(bullet(
     "full CIFAR-10 numbers."
 ))
 story.append(bullet(
-    "<b>Half-scale only.</b> 10 clients, 60 rounds, one seed, four CNNs, one local epoch, "
-    "2,500/500 per client. Absolute AM/FM are not comparable to the paper. Only the linear-vs-"
-    "entropy contrast and the class-axis geometry are usable."
+    "<b>Half-scale only.</b> 10 clients, 60 rounds, four CNNs, one local epoch, "
+    "2,500/500 per client. Absolute AM/FM are not comparable to the paper. The three-seed "
+    "sweep changes the uncertainty, not the scale."
 ))
 story.append(bullet(
-    "<b>One seed.</b> No seed-level uncertainty is claimed for class-std, class gap, worst-"
-    "class recall, or the rank order."
+    "<b>Three seeds.</b> Enough to expose seed noise (sd up to 0.085) but not enough for "
+    "significance on the FedFV-vs-PHPFL margin. Pairwise claims are sign counts, not tests."
 ))
 story.append(bullet(
-    "<b>Five runs are not a field survey.</b> The field-wide scope covers two MH-FL methods "
-    "(PHP-FL and FedAPEN). FedFV, FedHEAL, FedAWE, and FedAU were not ported; the original "
-    "E8 branch was dropped."
+    "<b>Four methods, not a field survey.</b> The field-wide scope covers two MH-FL methods "
+    "(PHP-FL and FedAPEN). FedFV is measured but is a reimplementation applied to the shared "
+    "model; FedHEAL, FedAWE, and FedAU are not implemented."
 ))
 story.append(bullet(
     "<b>Support sparsity.</b> Per-client class cells are sparse. The 10-sample threshold is a "
@@ -799,18 +825,21 @@ story.append(P(
     "baseline, 0.629 in Step 4); if other architectures contribute most of the cat/dog errors, "
     "the gap is partly an inductive-bias problem rather than federation."
 ))
-story.append(subsection("9.3 Multi-seed and full-scale confirmation"))
+story.append(subsection("9.3 More seeds on the FedFV margin"))
 story.append(P(
-    "A second seed and a full-scale CIFAR-10 audit are needed before any universal claim. The "
-    "paper-scale audit would use 20 clients, 3 local epochs, and 3 seeds. This is a future run; "
-    "it was not executed. The half-scale one-seed results should be treated as a diagnostic, "
-    "not a final measurement."
+    "Three seeds established the seed noise (sd up to 0.085) but cannot separate FedFV/linear's "
+    "3.4-point mean advantage over PHP-FL. With that sd, n >= 10 seeds is the smallest budget "
+    "that could distinguish them; it is the highest-value run left. A full-scale CIFAR-10 audit "
+    "(20 clients, 3 local epochs, multiple seeds) remains the prerequisite for any universal "
+    "claim."
 ))
 story.append(subsection("9.4 More MH-FL methods"))
 story.append(P(
-    "The field-wide scope currently rests on two methods. Porting FedFV, FedHEAL, FedAWE, and "
-    "FedAU into the same heterogeneous setting would test whether class-FM is a general "
-    "problem or specific to PHP-FL/FedAPEN. This is measurement, not a new method."
+    "FedFV is now measured (as a shared-model port). FedHEAL, FedAWE, and FedAU are not. "
+    "Identifying the exact FedHEAL paper PHP-FL cites is a prerequisite, because several "
+    "methods share the name. Porting the rest into the same heterogeneous setting would test "
+    "whether class-FM is a general problem or specific to PHP-FL/FedAPEN. This is measurement, "
+    "not a new method."
 ))
 story.append(subsection("9.5 Reporting standard"))
 story.append(P(
@@ -830,18 +859,21 @@ story.append(KeepTogether([make_table([
     ["Path", "Contents"],
     ["phofl/paper/", "Abstract through conclusion (sections 00-07)"],
     ["phofl/analysis/", "Client x class matrices, support filtering, AM normalization, ranks, "
-                        "10x10 confusion matrices, pair error budgets, resolution probe"],
+                        "10x10 confusion matrices, pair error budgets, resolution probe, "
+                        "three-seed sweep"],
     ["phofl_method/", "Ladder per-step CSVs, findings, LADDER_SUMMARY.md"],
-    ["phofl_half/results/", "Half-scale result CSVs"],
+    ["phofl_half/results/", "Half-scale result CSVs, including the 24-row seed sweep"],
     ["phofl_half/logs/", "Per-run round metrics and histories"],
     ["phofl/results/, phofl/logs/", "Earlier A/B/C scoped results"],
     ["phofl/figures/", "300 DPI figures"],
     ["phofl_experiments.ipynb", "Resumable A/B/C notebook"],
-    ["phofl_lab.py", "Runtime harness"],
+    ["phofl_lab.py", "Runtime harness, incl. FedFV aggregation"],
     ["analyze_two_axis.py", "Rebuilds the 2-D analysis"],
     ["analyze_confusion.py", "Builds the 10x10 matrices and pair budget"],
     ["resolution_probe.py", "Centralized 32/64/96 probe"],
+    ["run_seed_sweep.py", "Three-method + FedFV seed sweep"],
     ["run_step1.py ... run_step4.py", "Diagnostic ladder"],
+    ["tests/test_fedfv.py", "FedFV aggregation unit tests"],
 ], [5.0, 12.0], align="LEFT"), Spacer(1, 0.2 * cm)]))
 story.append(Spacer(1, 0.2 * cm))
 story.append(P(
@@ -853,14 +885,17 @@ story.append(subsection("10.1 Key commands"))
 story.append(P("Rebuild the committed analysis without training:", body_left))
 story.append(P("python analyze_two_axis.py", code))
 story.append(P("python analyze_confusion.py", code))
+story.append(P("python analyze_seed_sweep.py", code))
 story.append(P("python make_final_table.py", code))
 story.append(P("python -m pytest -q", code))
 story.append(Spacer(1, 0.4 * cm))
 story.append(box("One-line conclusion", [
-    "Client-FM is a useful but incomplete fairness report. The class axis is a real, "
-    "structural second dimension; it survives a participation change, it ranks methods "
-    "differently, and four standard interventions do not close it. Report class_FM and "
-    "worst-class recall alongside client-FM, but do not treat class_FM as an objective."
+    "Client-FM is a useful but incomplete fairness report. The class axis is a real "
+    "second dimension, but its magnitude is seed-dependent (0.39 +/- 0.08 for PHP-FL/linear, "
+    "not a stable 44 points), it ranks methods differently in every seed, and four standard "
+    "interventions do not close it. Only FedAPEN's larger gap is established across seeds. "
+    "Report class_FM and worst-class recall alongside client-FM with seed spread, and do not "
+    "treat class_FM as an objective."
 ]))
 story.append(Spacer(1, 0.5 * cm))
 story.append(P("References", h2))

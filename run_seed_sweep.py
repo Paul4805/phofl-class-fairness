@@ -166,13 +166,16 @@ def run_one(method, pattern, seed):
     raise RuntimeError(last_error)
 
 
-def main():
+def main(methods=None, seeds=None, patterns=None):
+    methods = methods or METHODS
+    seeds = seeds or SEEDS
+    patterns = patterns or PATTERNS
     OUT_MAIN.parent.mkdir(parents=True, exist_ok=True)
-    total = len(SEEDS) * len(METHODS) * len(PATTERNS)
+    total = len(seeds) * len(methods) * len(patterns)
     done = 0
-    for seed in SEEDS:
-        for method in METHODS:
-            for pattern in PATTERNS:
+    for seed in seeds:
+        for method in methods:
+            for pattern in patterns:
                 done += 1
                 print(f"\n[sweep] {done}/{total} {method}/{pattern}/s{seed}", flush=True)
                 res = run_one(method, pattern, seed)
@@ -217,4 +220,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--methods", nargs="+", default=None)
+    ap.add_argument("--seeds", nargs="+", type=int, default=None)
+    ap.add_argument("--patterns", nargs="+", default=None)
+    args = ap.parse_args()
+    main(args.methods, args.seeds, args.patterns)

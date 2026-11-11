@@ -9,17 +9,25 @@ served. This paper argues that client-FM alone is an incomplete reporting
 metric for model-heterogeneous FL (MH-FL), and demonstrates the omission on a
 controlled set of existing runs.
 
-The headline is a **44.3-point best-to-worst class recall spread** in the
-PHP-FL/linear run: frog 69.4% versus dog 25.1%. The run with the single best
-client-FM (PHP-FL/entropy, FM=0.0763) is not better on this axis; its spread is
-45.6 points. Thus the best client-level result is also a severely class-
-imbalanced result. The 44.3-point case is the conservative headline.
+The headline is a **0.39 ± 0.08 best-to-worst class recall spread** in
+PHP-FL/linear over three seeds, with seed 0 at 0.468 (frog 69.4% versus dog
+25.1%). The run with the single best client-FM (PHP-FL/entropy, FM=0.0763) is
+not better on this axis. Thus the best client-level result is also a severely
+class-imbalanced result. The earlier single-seed 44.3-point figure sits inside
+that spread and is reported as a seed-0 draw, not as the headline.
 
-The class axis is not merely a restatement of the participation pattern.
-Within a method, the class-level standard deviation changes by only 0.0015 for
-PHP-FL and 0.0084 for Standalone when moving from the linear to the
-entropy-correlated pattern. The class imbalance is structural for these models,
-not a consequence of the particular participation sampler.
+The class axis is not merely a restatement of the participation pattern, but
+the pattern effect is not uniform either. Re-running with three seeds shows the
+linear-to-entropy change moves the class gap by up to 15 points, in a direction
+that depends on the aggregation rule: it hurts FedFV (3/3) and Standalone
+(3/3), is mixed for PHP-FL, and helps FedAPEN (3/3). The single-seed claim that
+class imbalance is "structural / participation-agnostic" is therefore narrowed
+to: the class gap is large under every pattern tested, and its size is
+method-specific.
+
+With three seeds the method ordering also changes. PHP-FL and Standalone are
+indistinguishable on the class axis (0.387 vs 0.389, per-seed differences change
+sign), while FedAPEN is consistently worse in 6/6 comparisons (0.60 vs 0.39).
 
 We make four reporting contributions, not a new training method:
 
@@ -30,14 +38,15 @@ We make four reporting contributions, not a new training method:
 3. A proposed reporting metric, **class-balanced FM** (`class_FM`), to be
    reported alongside client-FM rather than optimized as an objective.
 4. Evidence that client-FM and class-std can rank the same runs in opposite
-   orders. This is an observation on five runs; n=5 is insufficient to test
-   whether the reversal is systematic.
+   orders. With three seeds the worst-gap run is also the best-client-FM run in
+   two of three seeds; the reversal is a replicated observation on these
+   methods, not a universal law.
 
 The scope of the field-wide claim was pre-registered. The FedAPEN/linear run
-completed with a **52.9-point** class gap, above the 30-point threshold, so the
-claim is promoted to field-wide across the two MH-FL methods tested (PHP-FL and
-FedAPEN). This is not a universal claim about all FL methods; it is a
-field-wide claim over the methods in this study. Between 20 and 30 points the
+completed with a class gap of 0.60 ± 0.09, well above the 30-point threshold,
+so the claim is promoted to field-wide across the two MH-FL methods tested
+(PHP-FL and FedAPEN). This is not a universal claim about all FL methods; it is
+a field-wide claim over the methods in this study. Between 20 and 30 points the
 evidence would have been called mixed, and below 20 points the claim would have
 narrowed to PHP-FL. Section 4b records the measured values and the rule.
 

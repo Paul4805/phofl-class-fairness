@@ -40,12 +40,14 @@ The pre-specified rule was:
 - class gap < 20 points → narrow to PHP-FL;
 - 20–30 points → mixed.
 
-FedAPEN's class gap is **52.9 points**, above the 30-point threshold. The claim
+FedAPEN's class gap is **0.60 ± 0.09** (three seeds; 6/6 per-seed comparisons
+against PHP-FL, penalty 6–32 points), above the 30-point threshold. The claim
 scope is therefore promoted, but only to the two MH-FL methods tested:
 
-> Across PHP-FL and FedAPEN, client-FM can hide a >40-point class-recall
+> Across PHP-FL and FedAPEN, client-FM can hide a 35–60-point class-recall
 > spread.
 
 This is not a universal claim about all FL methods. It is a field-wide claim
 over the two MH-FL methods in this study, based on the pre-specified rule. The
-FedAPEN rank by client-FM (3rd) and by class gap (5th, worst) are inverted.
+FedAPEN rank by client-FM (3rd) and by class gap (5th, worst) are inverted, and
+FedAPEN/linear is the worst-gap cell in all three seeds.

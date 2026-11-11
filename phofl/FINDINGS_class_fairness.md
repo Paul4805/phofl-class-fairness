@@ -1,11 +1,16 @@
-# Class fairness: the 44-point spread that client-FM hides
+# Class fairness: the large class spread that client-FM hides
 
-**Headline:** The **44.3-point best-to-worst class recall spread** appears in
-the PHP-FL/linear run, within the method family with the lowest client-FM. The
-single best-FM run (PHP-FL/entropy, FM=0.0763) is slightly worse on the class
-axis at 45.6 points, so 44.3 is the conservative case. The completed
-FedAPEN/linear run has a **52.9-point** gap, so the finding is no longer
-PHP-FL-specific.
+**Headline (three seeds):** PHP-FL/linear has a **0.39 ± 0.08** best-to-worst
+class recall spread, FedAPEN/linear **0.60 ± 0.09**, and Standalone/linear
+**0.389 ± 0.019**. The earlier single-seed figures (44.3 and 52.9 points) are
+superseded: 44.3 was the seed-0 draw from a distribution spanning 0.316–0.468.
+Client-FM hides the class axis in every seed, and the client-FM / class-gap
+inversion repeats. See `analysis/SEED_SWEEP_FINDINGS.md` for the three-seed
+tables and the FedFV cell.
+
+> The analysis below predates the three-seed sweep. Its structural conclusions
+> about the 2-D object, support filtering, and rank inversion still hold; its
+> exact seed-0 point estimates are historical.
 
 All numbers are descriptive analyses of completed half-scale runs. No new
 training was run for this document.

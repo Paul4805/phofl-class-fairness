@@ -58,22 +58,24 @@ larger run set. This is precisely why both axes should be reported.
 - **Scale.** The half-scale runs use 1 local epoch, 60 rounds, 10 clients, four
   CNNs, and 2,500/500 samples per client. This is roughly 8x less training than
   the paper's full setting. Absolute AM/FM are not comparable to the paper.
-- **Seeds.** One seed. No uncertainty estimate is claimed for class-std, class
-  gap, or the rank order.
-- **Methods.** Five completed runs cover PHP-FL, FedAPEN, and Standalone.
-  FedAPEN/linear has a 52.9-point class gap, above the pre-registered
-  30-point threshold, so the claim is field-wide across the two MH-FL methods
-  tested (PHP-FL and FedAPEN). It is not universal across all FL methods. A
-  FedAPEN entropy run is not available, so the pattern-invariance observation
-  remains PHP-FL/Standalone only.
+- **Seeds.** Three seeds for the eight-cell comparison (four methods × two
+  patterns). The ladder remains single-seed. Seed sd is reported wherever the
+  class axis is compared, and it is large enough that only FedAPEN's ordering
+  is established.
+- **Methods.** Eight cells cover PHP-FL, FedAPEN, FedFV, and Standalone.
+  FedAPEN/linear has a 0.60 ± 0.09 class gap, above the pre-registered
+  30-point threshold in every seed, so the claim is field-wide across the two
+  MH-FL methods tested (PHP-FL and FedAPEN). It is not universal across all FL
+  methods. FedFV is a reimplementation applied to the shared model, and FedHEAL
+  is not implemented.
 - **Support.** Per-client class cells are sparse. We use a pre-declared
   >=10-sample threshold and report the excluded cells. The global class-level
   headline uses the full 1,000-sample test set per class, so it is not driven by
   the sparse cells.
-- **AM confound.** After dividing the raw class gap by AM, Standalone's
-  absolute gap advantage disappears (0.711 vs 0.701 for PHP-FL/linear), so we
-  do not claim it; the PHP-FL-vs-FedAPEN rank inversion survives AM
-  normalization (FedAPEN is 3rd by client-FM and 5th by gap/AM).
+- **AM confound.** The single-seed gap/AM adjustment is superseded: with three
+  seeds PHP-FL and Standalone are tied on the raw class gap, so there is no
+  Standalone advantage to normalize away. The PHP-FL-vs-FedAPEN rank inversion
+  survives AM normalization (FedAPEN is 3rd by client-FM and 5th by gap/AM).
 - **Causality.** The analysis is descriptive. It does not identify a causal
   mechanism for the class spread, and it does not test the closed
   participation hypothesis.

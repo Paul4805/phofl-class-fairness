@@ -154,3 +154,40 @@ fig.savefig(OUT / "fig_am_norm.png", dpi=250, bbox_inches="tight")
 plt.close(fig)
 
 print("wrote figures to", OUT)
+
+# 6. Three-seed class gap per cell
+seed_rows = pd.read_csv(ROOT / "phofl/analysis/seed_sweep_class_gap.csv")
+seed_sum = pd.read_csv(ROOT / "phofl/analysis/seed_sweep_summary.csv")
+METHOD_ORDER = ["FedFV", "PHPFL", "Standalone", "FedAPEN"]
+PAT = {"linear": "linear", "entropy_correlated": "entropy"}
+COLORS = {"PHPFL": "#4C72B0", "FedAPEN": "#C44E52",
+          "FedFV": "#55A868", "Standalone": "#8172B2"}
+seed_sum["label"] = [f"{m} / {PAT[p]}" for m, p in
+                     zip(seed_sum["method"], seed_sum["pattern"])]
+seed_sum = seed_sum.sort_values("class_gap_mean").reset_index(drop=True)
+order = seed_sum["label"].tolist()
+seed_rows["label"] = [f"{m} / {PAT[p]}" for m, p in
+                      zip(seed_rows["method"], seed_rows["pattern"])]
+
+fig, ax = plt.subplots(figsize=(7.6, 4.2))
+for i, row in seed_sum.iterrows():
+    y = len(order) - 1 - i
+    pts = seed_rows[seed_rows["label"] == row["label"]]["class_gap"]
+    ax.scatter(pts, [y] * len(pts), s=22, color=COLORS[row["method"]],
+               alpha=0.75, zorder=3, label=None)
+    ax.errorbar(row["class_gap_mean"], y, xerr=row["class_gap_sd"], fmt="D",
+                color=COLORS[row["method"]], capsize=4, lw=1.6, ms=5, zorder=4)
+    ax.text(0.735, y, f"{row['class_gap_mean']:.3f} +/- {row['class_gap_sd']:.3f}",
+            va="center", fontsize=7.5)
+ax.set_yticks(range(len(order)))
+ax.set_yticklabels(order[::-1], fontsize=8)
+ax.set_xlim(0.24, 0.90)
+ax.set_xlabel("class gap (max - min per-class recall)")
+ax.set_title("Three seeds per cell: dots are seeds, diamonds are mean +/- sd")
+handles = [plt.Line2D([], [], marker="o", ls="", color=c, label=m)
+           for m, c in COLORS.items()]
+ax.legend(handles=handles, fontsize=7, loc="lower left")
+fig.tight_layout()
+fig.savefig(OUT / "fig_seed_gap.png", dpi=250, bbox_inches="tight")
+plt.close(fig)
+print("wrote", OUT / "fig_seed_gap.png")

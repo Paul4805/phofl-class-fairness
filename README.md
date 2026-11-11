@@ -11,18 +11,40 @@ federated learning (MH-FL). It is **not** a new FL method.
 ## Finding
 
 Client-FM (the standard deviation of per-client accuracy) hides a large class
-axis. On the CIFAR-10 half-scale runs:
+axis. On the CIFAR-10 half-scale runs, re-measured with **three seeds**:
 
-- PHP-FL/linear has a **44.3-point** best-to-worst class recall spread
-  (frog 69.4%, dog 25.1%) while client-FM is 0.0785.
-- The single best-client-FM run (PHP-FL/entropy) is worse on the class axis at
-  45.6 points.
-- FedAPEN/linear has a **52.9-point** gap, so the observation is field-wide
-  across the two MH-FL methods tested (PHP-FL and FedAPEN), not universal.
-- The two metrics rank the five runs differently; FedAPEN is 3rd by client-FM
-  but 5th by class gap. This is an observation, not a correlation claim.
+| method / pattern | AM | client-FM | class gap (mean ± sd) | worst-class recall |
+|---|---|---|---|---|
+| FedFV / linear | 0.627 | 0.087 | **0.353 ± 0.045** | **0.346** |
+| PHP-FL / linear | 0.629 | 0.086 | 0.387 ± 0.077 | 0.312 |
+| Standalone / linear | 0.542 | 0.100 | 0.389 ± 0.019 | 0.215 |
+| PHP-FL / entropy | 0.630 | 0.082 | 0.408 ± 0.017 | 0.278 |
+| Standalone / entropy | 0.538 | 0.095 | 0.409 ± 0.008 | 0.212 |
+| FedFV / entropy | 0.626 | 0.085 | 0.433 ± 0.030 | 0.268 |
+| FedAPEN / entropy | 0.606 | 0.087 | 0.504 ± 0.052 | 0.276 |
+| FedAPEN / linear | 0.615 | 0.078 | **0.602 ± 0.085** | 0.207 |
 
-The diagnostic ladder reduced the gap by at most **7.9%** over one seed:
+What survives, and what does not:
+
+- The single-seed "44.3-point gap" was a high draw. PHP-FL/linear spans
+  **0.316–0.468** across seeds, so the honest headline is **0.39 ± 0.08**.
+- PHP-FL has **no class-gap advantage over Standalone** (0.387 vs 0.389;
+  per-seed differences change sign). The AM-normalization argument is moot.
+- **FedAPEN is consistently worst**: 6/6 per-seed comparisons against PHP-FL,
+  penalty 12–22 points. This is the robust ordering.
+- **FedFV/linear** has the best mean gap and worst-class recall, but the
+  3.4-point margin over PHP-FL is inside the seed noise (3/3 sign, p = 0.25).
+  Directional only — not a method claim.
+- The client-FM / class-gap inversion is robust: the worst-gap run is
+  FedAPEN/linear in all three seeds, and it is also the best-client-FM run in
+  two of three.
+- The participation-pattern effect is **method-dependent** (up to 15 points,
+  and its sign flips between FedAPEN and FedFV), not a structural constant.
+
+See `phofl/analysis/SEED_SWEEP_FINDINGS.md` for the full tables, the stack
+calibration, and the FedFV implementation notes.
+
+The diagnostic ladder reduced the gap by at most **7.9%** (single seed):
 
 | rung | intervention | AM | FM | class gap | reduction | dog | frog |
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -52,7 +74,8 @@ an information floor; native 96×96 STL-10 is the required control. See
   FedAPEN section, ladder section, discussion, conclusion.
 - `phofl/analysis/` — 2-D client×class matrices, support-filtered analysis,
   AM-normalized analysis, ranking tables, FedAPEN scope, full 10×10 confusion
-  matrices, pair error budgets, and the resolution-probe analysis.
+  matrices, pair error budgets, the resolution-probe analysis, and the
+  three-seed class-gap sweep.
 - `phofl_method/` — per-step ladder CSVs, findings, and `LADDER_SUMMARY.md`.
 - `phofl_half/results/` — CIFAR-10 half-scale result CSVs.
 - `phofl_half/logs/` — per-run round metrics and histories.
@@ -61,6 +84,9 @@ an information floor; native 96×96 STL-10 is the required control. See
 - `phofl_experiments.ipynb` — resumable A/B/C experiment notebook.
 - `phofl_lab.py` — runtime harness used by the notebook and scripts.
 - `analyze_two_axis.py` — rebuilds the 2-D analysis from logs.
+- `analyze_confusion.py` — rebuilds the 10×10 confusion matrices and pair budget.
+- `run_seed_sweep.py`, `analyze_seed_sweep.py` — three-seed class-gap sweep.
+- `tests/test_fedfv.py` — FedFV aggregation unit tests.
 - `run_step1.py` … `run_step4.py` — the diagnostic ladder.
 - `run_c_half.py`, `run_fedapen_half.py`, `run_c_pinned_smoke.py` — C
   escalation and pinned-stack runs.

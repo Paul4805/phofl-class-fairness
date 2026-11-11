@@ -36,6 +36,10 @@ pinned = pd.read_csv(ROOT / "phofl/escalation/pinned_smoke_C.csv")
 pinned_holm = pd.read_csv(ROOT / "phofl/escalation/pinned_smoke_holm.csv")
 verdict = pd.read_csv(ROOT / "phofl/escalation/C_half_verdict.csv").iloc[0]
 half_client = pd.read_csv(ROOT / "phofl_half/results/C_half_results.csv")
+seed_sum = pd.read_csv(ROOT / "phofl/analysis/seed_sweep_summary.csv")
+seed_sum["_o"] = seed_sum["method"].map(
+    {"PHPFL": 0, "FedAPEN": 1, "FedFV": 2, "Standalone": 3})
+seed_sum = seed_sum.sort_values(["_o", "pattern"]).drop(columns="_o")
 
 CLASSES = ["airplane", "automobile", "bird", "cat", "deer",
            "dog", "frog", "horse", "ship", "truck"]
@@ -440,6 +444,35 @@ story.append(P("No confirmed resolution-limited floor and no confirmed label-amb
                "best joint improvement is 7.3% and no rung closes a pair.", small))
 story.append(PageBreak())
 
+# Three-seed sweep
+story.append(section("Three-seed class-gap sweep"))
+story.append(P("Four methods x two patterns x three seeds, one stack (torch 2.14.1), 24 runs", h2))
+story.append(P("Same protocol as the half-scale runs. Class gap is max minus min per-class "
+               "recall on the full CIFAR-10 test set; error bars are sample sd over seeds. "
+               "The seed-0 cells were re-run on the current stack, so the three seeds are "
+               "comparable; the pinned seed-0 artifacts differ by at most 0.005 AM and "
+               "0.012 client-FM.", small))
+st = seed_sum.copy()
+st["label"] = st["method"] + " / " + st["pattern"].str.replace("_correlated", "", regex=False)
+rows = []
+for _, r in st.iterrows():
+    rows.append([r["label"],
+                 f"{r['AM_mean']:.4f} +/- {r['AM_sd']:.4f}",
+                 f"{r['FM_mean']:.4f} +/- {r['FM_sd']:.4f}",
+                 f"{r['class_gap_mean']:.4f} +/- {r['class_gap_sd']:.4f}",
+                 f"{r['worst_recall_mean']:.3f}"])
+story.append(make_table([["method / pattern", "AM", "client-FM", "class gap", "worst recall"]]
+                        + rows, [5.2, 3.6, 3.6, 3.8, 2.8], font=7.0))
+story.append(P("The 44.3-point seed-0 PHP-FL figure is a high draw: the same cell spans "
+               "0.316-0.468. PHP-FL and Standalone are tied on the class axis (per-seed "
+               "differences change sign). FedAPEN is worse than PHP-FL in 6/6 per-seed "
+               "comparisons. FedFV/linear has the best mean gap and worst-class recall, but "
+               "its 3.4-point margin is inside the seed noise (3/3 sign, p=0.25).",
+               small))
+story.append(figure(FIG / "fig_seed_gap.png",
+                    "Per-seed class gap. Dots are seeds; diamonds are mean +/- sd.", CONTENT_W * 0.9))
+story.append(PageBreak())
+
 # Artifacts
 story.append(section("Result artifact index"))
 story.append(P("Committed result files", h2))
@@ -467,6 +500,9 @@ files = [
     ["phofl/analysis/confusion_pair_budget.csv", "Directional, cross, joint, share per pair"],
     ["phofl/analysis/resolution_probe_cifar.csv", "32/64/96 centralized probe"],
     ["phofl/analysis/CONFUSION_RESOLUTION_FINDINGS.md", "Confusion and resolution analysis"],
+    ["phofl_half/results/C_half_s3_seed_sweep.csv", "24-run three-seed sweep"],
+    ["phofl/analysis/seed_sweep_summary.csv", "Mean/sd per method x pattern"],
+    ["phofl/analysis/SEED_SWEEP_FINDINGS.md", "Three-seed findings and FedFV notes"],
 ]
 story.append(make_table([["Path", "Contents"]] + files, [7.5, 9.5], align="LEFT", font=6.2))
 story.append(P("Excluded: checkpoints, run_store, generated data, third_party, phofl_pinned, .venv-pinned. See DATA.md.", small))

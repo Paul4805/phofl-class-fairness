@@ -72,11 +72,12 @@ result in the ladder, but it is still far below the 30% closure threshold.
 
 ## 5.5 Federation amplifies, but does not create, the gap
 
-The Standalone (local-only) run has a **38.6-point** gap, versus **44.3
-points** for PHP-FL/linear. Federation therefore amplifies the class gap by
-about 5.7 points, but most of the gap exists without any server aggregation.
-The problem is not created by the FL protocol; it is inherited from the
-data/model geometry and then modestly amplified.
+On three seeds the Standalone (local-only) run has a **0.389 ± 0.019** gap and
+PHP-FL/linear has **0.387 ± 0.077**: the two are indistinguishable. The earlier
+single-seed reading (38.6 vs 44.3, "federation amplifies by 5.7 points") was
+seed noise. What survives is that a large class gap exists without any server
+aggregation at all, while federation adds 8.6 points of average accuracy
+(0.629 vs 0.542) without narrowing the class axis.
 
 ## 5.6 Interpretation
 

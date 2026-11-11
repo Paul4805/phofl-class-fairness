@@ -5,11 +5,17 @@
 Most FL fairness work defines fairness across clients. q-FedAvg [Li et al.,
 ICLR 2020] reweights client updates to improve the worst-client objective;
 AFL [Mohri et al., ICML 2019] minimizes an agnostic distribution over clients;
-FedFV [Wang et al., IJCAI 2021] adds a fairness-aware aggregation rule;
-FedHEAL adds a heterogeneity-aware fairness objective. These methods are
+FedFV [Wang et al., IJCAI 2021] resolves conflicts between client gradients
+before averaging them. These methods are
 evaluated primarily with client-accuracy dispersion, minimum client accuracy,
 or a fairness index over clients. The evaluation object is typically the vector
 of client accuracies, with classes marginalized out.
+
+FedFV is included in the class-gap comparison in this repository. It is a
+reimplementation from the paper (Algorithms 1–3, alpha=0.1, tau=3), applied to
+the shared model because the harness is model-heterogeneous; it is therefore
+"FedFV aggregation on the PHP-FL local objective", not vanilla FedFV. FedHEAL
+and the remaining fair-FL baselines are not implemented.
 
 Model-heterogeneous FL adds a second source of inequality: clients run
 different architectures, so their local models and feature spaces differ.
