@@ -83,6 +83,18 @@ SCALES = {
              "local_epochs": 5, "batch_size": 64, "eval_gap": 5},
 }
 
+# Dataset-wide class count used by the evaluation/logging paths.  Default 10
+# keeps the CIFAR-10 artifacts reproducible; a run script calls
+# set_num_classes() before configuring a different dataset.
+NUM_CLASSES = 10
+CLASS_NAMES = [f"class_{k}" for k in range(NUM_CLASSES)]
+
+
+def set_num_classes(n: int, names=None) -> None:
+    global NUM_CLASSES, CLASS_NAMES
+    NUM_CLASSES = int(n)
+    CLASS_NAMES = list(names) if names is not None else [f"class_{k}" for k in range(NUM_CLASSES)]
+
 
 # ---------------------------------------------------------------------------
 # Basic utilities
@@ -859,13 +871,13 @@ def _worst_class_recalls(server, gamma: float = 5.0):
     g = sp.load_item("Server", "global_model", server.save_folder_name)
     g.eval()
     loader = _global_test_loader(server.dataset)
-    correct = np.zeros(10, dtype=np.float64)
-    total = np.zeros(10, dtype=np.float64)
+    correct = np.zeros(NUM_CLASSES, dtype=np.float64)
+    total = np.zeros(NUM_CLASSES, dtype=np.float64)
     with torch.no_grad(), _autocast():
         for x, y in loader:
             x, y = x.to(DEVICE), y.to(DEVICE)
             pred = g(x).argmax(1)
-            for k in range(10):
+            for k in range(NUM_CLASSES):
                 m = y == k
                 correct[k] += float((pred[m] == k).sum().item())
                 total[k] += float(m.sum().item())
@@ -1116,6 +1128,14 @@ def _global_test_loader(dataset: str, batch_size: int = 256) -> DataLoader:
         tf = transforms.Compose([transforms.ToTensor(),
                                  transforms.Normalize((0.5,), (0.5,))])
         ds = datasets.FashionMNIST(root=str(root), train=False, download=True, transform=tf)
+    elif dataset in ("DermaMNIST", "BloodMNIST"):
+        if ACTIVE_DATA_ROOT is None:
+            raise RuntimeError("Set data_root before loading a MedMNIST global test set")
+        path = Path(ACTIVE_DATA_ROOT) / dataset / "global_test.npz"
+        blob = np.load(path, allow_pickle=True)
+        x = torch.tensor(blob["x"], dtype=torch.float32)
+        y = torch.tensor(blob["y"], dtype=torch.int64)
+        ds = torch.utils.data.TensorDataset(x, y)
     else:
         raise ValueError(dataset)
     return DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
@@ -1136,7 +1156,7 @@ def make_args(dataset: str, num_clients: int, rounds: int, batch_size: int,
     args.device = "cuda" if torch.cuda.is_available() else "cpu"
     args.device_id = "0"
     args.dataset = dataset
-    args.num_classes = 10
+    args.num_classes = int(NUM_CLASSES)
     args.model_family = model_family
     args.batch_size = int(batch_size)
     args.local_learning_rate = float(local_lr)
@@ -1222,8 +1242,8 @@ def eval_client_models(client, include_classes: bool = True) -> Dict[str, Any]:
     n = 0
     local_correct = aux_correct = ens_correct = 0
     local_loss = 0.0
-    class_correct = np.zeros(10, dtype=np.int64)
-    class_total = np.zeros(10, dtype=np.int64)
+    class_correct = np.zeros(NUM_CLASSES, dtype=np.int64)
+    class_total = np.zeros(NUM_CLASSES, dtype=np.int64)
     with _autocast():
         for x, y in loader:
             x = x.to(DEVICE)
@@ -1238,7 +1258,7 @@ def eval_client_models(client, include_classes: bool = True) -> Dict[str, Any]:
             n += int(y.numel())
             if include_classes:
                 pred = ens.argmax(1)
-                for c in range(10):
+                for c in range(NUM_CLASSES):
                     m = y == c
                     class_total[c] += int(m.sum().item())
                     class_correct[c] += int((pred[m] == c).sum().item())
@@ -1251,7 +1271,7 @@ def eval_client_models(client, include_classes: bool = True) -> Dict[str, Any]:
         "ensemble_acc": ens_correct / max(n, 1),
         "local_loss": local_loss / max(n, 1),
         "class_acc": [class_correct[c] / class_total[c] if class_total[c] else float("nan")
-                      for c in range(10)],
+                      for c in range(NUM_CLASSES)],
     }
 
 
@@ -1301,7 +1321,7 @@ def evaluate_all_clients(server, include_G: bool = False) -> pd.DataFrame:
             "lambda_i": _ensemble_weight(c),
             "rare_class": rare,
             "rare_acc": rare_acc,
-            **{f"class_{k}_acc": m["class_acc"][k] for k in range(10)},
+            **{f"class_{k}_acc": m["class_acc"][k] for k in range(NUM_CLASSES)},
         })
     return pd.DataFrame(rows)
 
@@ -1498,7 +1518,7 @@ def _round_metric_columns() -> List[str]:
     return ["exp", "method", "dataset", "pattern", "seed", "round", "is_final", "client_id",
             "arch", "n", "p_i", "N_i", "local_acc", "local_loss", "aux_acc", "ensemble_acc",
             "G_acc", "alpha_i", "lambda_i", "rare_class", "rare_acc"] + \
-           [f"class_{k}_acc" for k in range(10)]
+           [f"class_{k}_acc" for k in range(NUM_CLASSES)]
 
 
 def run_federated(exp: str, method: str, dataset: str, pattern: str, seed: int,
@@ -1514,7 +1534,7 @@ def run_federated(exp: str, method: str, dataset: str, pattern: str, seed: int,
                   late_join_round: Optional[int] = None,
                   grad_hook: Optional[Callable[[Any, int], Dict[str, Any]]] = None,
                   log_active_metrics: bool = True,
-                  client_cls=None) -> Dict[str, Any]:
+                  client_cls=None, local_lr: float = 0.001) -> Dict[str, Any]:
     """Run one (exp, method, pattern, seed) configuration with resume support."""
     import flcore.servers.serverphp as sp
     extra = {"rounds": rounds, "num_clients": num_clients, "batch": batch_size,
@@ -1557,7 +1577,7 @@ def run_federated(exp: str, method: str, dataset: str, pattern: str, seed: int,
                          valid_ratio=valid_ratio,
                          join_method=(pattern if pattern in ("normal", "linear", "uniform") else "normal"),
                          global_arch=aux_arch, save_folder=run_store,
-                         model_family=model_family)
+                         model_family=model_family, local_lr=local_lr)
         server = build_server(args, method=method, agg_mode=agg_mode, client_cls=client_cls)
         # Declared participation probabilities.  Baseline uses the repo's own
         # normal sampler; experiments override it with a fixed p vector.
@@ -1835,8 +1855,8 @@ def eval_local_only(client) -> Dict[str, Any]:
     n = 0
     correct = 0
     loss_sum = 0.0
-    class_correct = np.zeros(10, dtype=np.int64)
-    class_total = np.zeros(10, dtype=np.int64)
+    class_correct = np.zeros(NUM_CLASSES, dtype=np.int64)
+    class_total = np.zeros(NUM_CLASSES, dtype=np.int64)
     with _autocast():
         for x, y in loader:
             x, y = x.to(DEVICE), y.to(DEVICE)
@@ -1845,7 +1865,7 @@ def eval_local_only(client) -> Dict[str, Any]:
             pred = out.argmax(1)
             correct += int((pred == y).sum().item())
             n += int(y.numel())
-            for c in range(10):
+            for c in range(NUM_CLASSES):
                 m = y == c
                 class_total[c] += int(m.sum().item())
                 class_correct[c] += int((pred[m] == c).sum().item())
@@ -1854,14 +1874,15 @@ def eval_local_only(client) -> Dict[str, Any]:
     return {"n": n, "local_acc": correct / max(n, 1), "aux_acc": float("nan"),
             "ensemble_acc": correct / max(n, 1), "local_loss": loss_sum / max(n, 1),
             "class_acc": [class_correct[c] / class_total[c] if class_total[c] else float("nan")
-                          for c in range(10)]}
+                          for c in range(NUM_CLASSES)]}
 
 
 def run_standalone(exp: str, dataset: str, pattern: str, seed: int, rounds: int,
                    num_clients: int, batch_size: int, local_epochs: int,
                    eval_gap: int, data_root: Optional[Path] = None,
                    scale: str = "smoke10", resume: bool = True,
-                   max_hours: float = 6.0, model_family: str = "HtM4") -> Dict[str, Any]:
+                   max_hours: float = 6.0, model_family: str = "HtM4",
+                   local_lr: float = 0.001) -> Dict[str, Any]:
     """Local-only baseline. It has no server, so participation patterns are ignored."""
     extra = {"rounds": rounds, "num_clients": num_clients, "batch": batch_size,
              "epochs": local_epochs, "agg": "none", "aux": "none",
@@ -1895,7 +1916,7 @@ def run_standalone(exp: str, dataset: str, pattern: str, seed: int, rounds: int,
                          valid_ratio=0.1,
                          join_method=(pattern if pattern in ("normal", "linear", "uniform") else "normal"),
                          global_arch="googlenet", save_folder=run_store,
-                         model_family=model_family)
+                         model_family=model_family, local_lr=local_lr)
         server = build_server(args, method="PHPFL", agg_mode="plain")
         server.participation_probability = participation_probabilities(
             pattern, dataset, num_clients, seed=seed)
@@ -1928,7 +1949,7 @@ def run_standalone(exp: str, dataset: str, pattern: str, seed: int, rounds: int,
                         "G_acc": float("nan"), "alpha_i": float(getattr(c, "update_ratio", np.nan)),
                         "lambda_i": 1.0, "rare_class": rare,
                         "rare_acc": m["class_acc"][rare] if rare >= 0 else float("nan"),
-                        **{f"class_{k}_acc": m["class_acc"][k] for k in range(10)},
+                        **{f"class_{k}_acc": m["class_acc"][k] for k in range(NUM_CLASSES)},
                     })
                 df = pd.DataFrame(rows)
                 df.insert(0, "round", r)
@@ -1963,7 +1984,7 @@ def run_standalone(exp: str, dataset: str, pattern: str, seed: int, rounds: int,
                 "G_acc": float("nan"), "alpha_i": float(getattr(c, "update_ratio", np.nan)),
                 "lambda_i": 1.0, "rare_class": rare,
                 "rare_acc": m["class_acc"][rare] if rare >= 0 else float("nan"),
-                **{f"class_{k}_acc": m["class_acc"][k] for k in range(10)},
+                **{f"class_{k}_acc": m["class_acc"][k] for k in range(NUM_CLASSES)},
             })
         df = pd.DataFrame(rows)
         df.insert(0, "round", rounds); df.insert(0, "seed", seed)

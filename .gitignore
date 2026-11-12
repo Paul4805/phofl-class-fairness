@@ -37,3 +37,7 @@ phofl_half/ckpts/
 # Local notebook duplicate
 phofl/phofl_experiments.ipynb
 report/_preview*/
+phofl_med/data_cap/
+phofl_med/run_store/
+phofl_med/ckpts/
+phofl_med/medmnist/
