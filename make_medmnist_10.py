@@ -66,15 +66,37 @@ def dirichlet_partition(y: np.ndarray, n_clients: int, n_classes: int,
     return [np.asarray(sorted(p), dtype=np.int64) for p in parts], stats
 
 
+def balanced_partition(y: np.ndarray, n_clients: int, n_classes: int, seed: int):
+    """Stratified IID split: every client gets the same class mix and size."""
+    rng = np.random.default_rng(seed)
+    parts = [[] for _ in range(n_clients)]
+    stats = np.zeros((n_clients, n_classes), dtype=np.int64)
+    for k in range(n_classes):
+        idx_k = np.where(y == k)[0]
+        rng.shuffle(idx_k)
+        base, rem = divmod(len(idx_k), n_clients)
+        start = 0
+        for cid in range(n_clients):
+            take = base + (1 if cid < rem else 0)
+            chunk = idx_k[start:start + take]
+            start += take
+            parts[cid].extend(chunk.tolist())
+            stats[cid, k] = take
+    return [np.asarray(sorted(p), dtype=np.int64) for p in parts], stats
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", default="BloodMNIST", choices=sorted(SPECS))
+    ap.add_argument("--partition", default="dir", choices=["dir", "balanced"])
     args = ap.parse_args()
     spec = SPECS[args.dataset]
     classes = spec["classes"]
     n_classes = len(classes)
     src = ROOT / "phofl_med" / "medmnist" / f"{args.dataset.lower()}.npz"
-    out = ROOT / "phofl_med" / "data_cap" / args.dataset
+    base = ROOT / "phofl_med" / "data_cap"
+    out = base / (args.dataset if args.partition == "dir"
+                  else f"balanced/{args.dataset}")
     if (out / "train" / "0.npz").exists() and (out / "global_test.npz").exists():
         print("already generated", out)
         return
@@ -89,7 +111,10 @@ def main():
     global_x = to_tensor(blob["test_images"]).numpy()
     global_y = blob["test_labels"].ravel().astype(np.int64)
 
-    parts, stats = dirichlet_partition(pooled_y, N_CLIENTS, n_classes, ALPHA, SEED)
+    if args.partition == "dir":
+        parts, stats = dirichlet_partition(pooled_y, N_CLIENTS, n_classes, ALPHA, SEED)
+    else:
+        parts, stats = balanced_partition(pooled_y, N_CLIENTS, n_classes, SEED)
     (out / "train").mkdir(parents=True, exist_ok=True)
     (out / "test").mkdir(parents=True, exist_ok=True)
     for cid, idx in enumerate(parts):

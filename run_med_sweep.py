@@ -8,15 +8,24 @@ Arms
   centralized : the four HtM4 architectures trained independently on the pooled
                 client training data and ensembled by mean softmax (no server,
                 no client split). This is the non-federated reference.
+  advanced    : ConvNeXt-Tiny on the same pooled data; `scratch` trains from
+                random init, `pretrained` fine-tunes ImageNet weights. Single
+                model, no federation, no clients.
   PHPFL       : PHP-FL local objective + plain shared-model averaging
   FedAPEN     : FedAPEN client class
   FedFV       : FedFV aggregation on the shared model (alpha=0.1, tau=3)
   Standalone  : local-only training, no aggregation
 
+Regimes
+  skewed   : Dirichlet(0.5) label skew across the 10 clients (default)
+  balanced : stratified IID split, equal client size and class mix
+
 Usage
-  python run_med_sweep.py --part central   # 3 seeds, ~20-30 min each
-  python run_med_sweep.py --part fl        # 4 methods x 2 patterns x 3 seeds
-  python run_med_sweep.py --part all
+  python run_med_sweep.py --part central                    # 4-CNN ensemble
+  python run_med_sweep.py --part advanced                   # ConvNeXt scratch/pretrained
+  python run_med_sweep.py --part fl                         # skewed FL grid
+  python run_med_sweep.py --part fl --regime balanced       # balanced FL grid
+  python run_med_sweep.py --part all                        # skewed: central+adv+FL
 """
 import argparse
 import json
@@ -50,7 +59,29 @@ METHODS = ["PHPFL", "FedAPEN", "FedFV", "Standalone"]
 PATTERNS = ["linear", "entropy_correlated"]
 OUT_MAIN = ROOT / "results" / "med_sweep.csv"
 OUT_REC = ROOT / "results" / "med_sweep_recall.csv"
+OUT_ADV = ROOT / "results" / "med_central_adv.csv"
+OUT_ADV_REC = ROOT / "results" / "med_central_adv_recall.csv"
 KEYS = ["arm", "method", "pattern", "seed"]
+
+REGIME = "skewed"
+ADV_EPOCHS = {"scratch": 40, "pretrained": 15}
+ADV_LR = {"scratch": 1e-3, "pretrained": 1e-4}
+
+
+def set_regime(regime: str):
+    """Switch the data root / experiment namespace for the FL arms."""
+    global REGIME, DATA, EXP, OUT_MAIN, OUT_REC
+    REGIME = regime
+    if regime == "balanced":
+        DATA = ROOT / "data_cap" / "balanced"
+        EXP = "MED_bal_s3"
+        OUT_MAIN = ROOT / "results" / "med_sweep_balanced.csv"
+        OUT_REC = ROOT / "results" / "med_sweep_balanced_recall.csv"
+    else:
+        DATA = ROOT / "data_cap"
+        EXP = "MED_s3"
+        OUT_MAIN = ROOT / "results" / "med_sweep.csv"
+        OUT_REC = ROOT / "results" / "med_sweep_recall.csv"
 
 pl.set_num_classes(N_CLASSES, CLASSES)
 pl.configure(ROOT, "third_party/PHP-FL-main", colab=False)
@@ -180,6 +211,85 @@ def run_centralized_seed(seed: int):
           f"worst={row['worst_class']} {row['worst_class_recall']:.3f}", flush=True)
 
 
+def build_advanced(variant: str):
+    """A single modern classifier, no federation.
+
+    scratch    : ConvNeXt-Tiny trained from random init on the pooled data
+    pretrained : the same network fine-tuned from ImageNet weights
+    """
+    from torchvision import models as tvm
+    if variant == "scratch":
+        return tvm.convnext_tiny(weights=None, num_classes=N_CLASSES)
+    if variant == "pretrained":
+        model = tvm.convnext_tiny(weights=tvm.ConvNeXt_Tiny_Weights.IMAGENET1K_V1)
+        in_features = model.classifier[2].in_features
+        model.classifier[2] = torch.nn.Linear(in_features, N_CLASSES)
+        return model
+    raise ValueError(variant)
+
+
+def run_advanced_seed(variant: str, seed: int):
+    """Generic advanced classifier on pooled data (the non-federated reference)."""
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    x_np, y_np = pooled_train()
+    loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(torch.tensor(x_np), torch.tensor(y_np)),
+        batch_size=BATCH, shuffle=True, num_workers=0, pin_memory=True, drop_last=True)
+    gx, gy = global_test()
+    test_loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(gx, gy), batch_size=256, shuffle=False)
+
+    epochs = ADV_EPOCHS[variant]
+    model = build_advanced(variant).to(pl.DEVICE)
+    opt = torch.optim.AdamW(model.parameters(), lr=ADV_LR[variant], weight_decay=0.05)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
+    scaler = torch.cuda.amp.GradScaler(enabled=torch.cuda.is_available())
+    t0 = time.time()
+    for ep in range(epochs):
+        model.train()
+        for bx, by in loader:
+            bx, by = bx.to(pl.DEVICE), by.to(pl.DEVICE)
+            opt.zero_grad(set_to_none=True)
+            with torch.cuda.amp.autocast(enabled=torch.cuda.is_available()):
+                loss = F.cross_entropy(model(bx), by)
+            scaler.scale(loss).backward()
+            scaler.step(opt)
+            scaler.update()
+        sched.step()
+        if (ep + 1) % 10 == 0:
+            print(f"[adv] seed={seed} {variant} epoch={ep+1}/{epochs} "
+                  f"elapsed={time.time()-t0:.0f}s", flush=True)
+
+    model.eval()
+    probs = torch.zeros((len(gy), N_CLASSES))
+    offset = 0
+    with torch.no_grad():
+        for bx, by in test_loader:
+            out = model(bx.to(pl.DEVICE))
+            probs[offset:offset + len(by)] += torch.softmax(out.float(), dim=1).cpu()
+            offset += len(by)
+    pred = probs.argmax(dim=1)
+    rows = per_class_recall(pred, gy)
+    row, rec = summarize(rows, {"arm": "centralized_advanced",
+                                "method": "Centralized-Advanced",
+                                "variant": variant, "seed": seed,
+                                "seconds": time.time() - t0,
+                                "mean_single_gap": np.nan})
+    row["variant"] = variant
+    append_dedup(OUT_ADV, pd.DataFrame([row]), ["method", "variant", "seed"])
+    append_dedup(OUT_ADV_REC, rec.assign(method="Centralized-Advanced", variant=variant,
+                                         seed=seed),
+                 ["method", "variant", "seed", "class_id"])
+    print(f"[adv] done {variant}/s{seed}: AM={row['AM']:.4f} "
+          f"gap={row['class_gap']:.4f} worst={row['worst_class']} "
+          f"{row['worst_class_recall']:.3f} ({time.time()-t0:.0f}s)", flush=True)
+    del model
+    pl.clear_memory()
+
+
 def global_per_class_recall(result, client_df):
     loader = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(*global_test()), batch_size=256, shuffle=False)
@@ -285,26 +395,42 @@ def run_fl_seed(method, pattern, seed):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--part", choices=["central", "fl", "all"], default="all")
+    ap.add_argument("--part", choices=["central", "advanced", "fl", "all"], default="all")
+    ap.add_argument("--regime", choices=["skewed", "balanced"], default="skewed")
+    ap.add_argument("--variants", nargs="+", default=None)
     ap.add_argument("--methods", nargs="+", default=None)
     ap.add_argument("--patterns", nargs="+", default=None)
     ap.add_argument("--seeds", nargs="+", type=int, default=None)
     args = ap.parse_args()
+    set_regime(args.regime)
     methods = args.methods or METHODS
     patterns = args.patterns or PATTERNS
     seeds = args.seeds or SEEDS
+    variants = args.variants or ["scratch", "pretrained"]
 
     OUT_MAIN.parent.mkdir(parents=True, exist_ok=True)
-    if args.part in ("central", "all"):
-        done = set()
-        if OUT_MAIN.exists():
-            prev = pd.read_csv(OUT_MAIN)
-            done = set(prev.loc[prev.method == "Centralized", "seed"].astype(int))
+    central_done = set()
+    if OUT_MAIN.exists():
+        prev = pd.read_csv(OUT_MAIN)
+        central_done = set(prev.loc[prev.method == "Centralized", "seed"].astype(int))
+    adv_done = set()
+    if OUT_ADV.exists():
+        prev = pd.read_csv(OUT_ADV)
+        adv_done = set(zip(prev["variant"], prev["seed"].astype(int)))
+
+    if args.part in ("central", "all") and args.regime == "skewed":
         for seed in seeds:
-            if seed in done:
+            if seed in central_done:
                 print(f"[central] skip seed {seed}")
                 continue
             run_centralized_seed(seed)
+    if args.part in ("advanced", "all") and args.regime == "skewed":
+        for seed in seeds:
+            for variant in variants:
+                if (variant, seed) in adv_done:
+                    print(f"[adv] skip {variant}/s{seed}")
+                    continue
+                run_advanced_seed(variant, seed)
     if args.part in ("fl", "all"):
         total = len(seeds) * len(methods) * len(patterns)
         done = 0
